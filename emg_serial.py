@@ -11,15 +11,14 @@ IDXCH1 = (4,5)
 class SerialManager(object) :
 
 	def __init__(self):
-		ports = SerialManager.serial_ports()
+		print SerialManager.serial_ports()
 		ser = serial.Serial(
 			port=ports[-1],
 			baudrate=BAUDRATE,
 		)
 
 		ser.close()
-		ser.open()sys.platform.startswith('linux') or sys.platform.startswith('cygwin'):
-			p
+		ser.open()
 
 		self.ser = ser
 
@@ -27,7 +26,8 @@ class SerialManager(object) :
 	def serial_ports():
 		if sys.platform.startswith('win'):
 			ports = ['COM' + str(i + 1) for i in range(256)]
-		elif orts = glob.glob('/dev/tty[A-Za-z]*')
+		elif sys.platform.startswith('linux') or sys.platform.startswith('cygwin'):
+			ports = glob.glob('/dev/tty[A-Za-z]*')
 		elif sys.platform.startswith('darwin'):
 			ports = glob.glob('/dev/tty.*')
 		else:
