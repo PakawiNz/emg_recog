@@ -11,7 +11,7 @@ IDXCH1 = (4,5)
 class SerialManager(object) :
 
 	def __init__(self):
-		print SerialManager.serial_ports()
+		ports = SerialManager.serial_ports()
 		ser = serial.Serial(
 			port=ports[-1],
 			baudrate=BAUDRATE,

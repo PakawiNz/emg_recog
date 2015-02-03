@@ -7,9 +7,9 @@ from customplot import SlidingPlot
 
 class MainWindow(QtGui.QMainWindow):
 	"""docstring for MainWindow"""
-	def __init__(self,Slave):
+	def __init__(self,slave):
 		QtGui.QMainWindow.__init__(self)
-		self.slave = Slave()
+		self.slave = slave
 		
 		layout = QtGui.QGridLayout()
 		
@@ -26,9 +26,13 @@ class MainWindow(QtGui.QMainWindow):
 		widget.clicked.connect(self.btnPlayFN)
 		self.btnPlay = widget
 
-		widget = QtGui.QPushButton('Pause')
+		widget = QtGui.QPushButton('Terminate')
 		widget.setDisabled(True)
-		widget.clicked.connect(self.btnPauseFN)
+		widget.clicked.connect(self.btnTerminateFN)
+		self.btnTerminate = widget
+
+		widget = QtGui.QCheckBox('Pause')
+		widget.stateChanged.connect(self.btnPauseFN)
 		self.btnPause = widget
 
 		widget = SlidingPlot(lockAspect=True, enableMouse=False, enableMenu=False)
@@ -37,6 +41,7 @@ class MainWindow(QtGui.QMainWindow):
 
 		widget = pg.PlotWidget(lockAspect=True, enableMouse=False, enableMenu=False)
 		widget.setYRange(0,500)
+		widget.keyPressEvent = self.keyPressEvent
 		self.slave.updateFFT.connect(self.updateFFT)
 		self.fftArea = widget
 
@@ -44,13 +49,15 @@ class MainWindow(QtGui.QMainWindow):
 		layout.setColumnStretch(1, 3)
 		layout.setColumnStretch(2, 3)
 		layout.setColumnStretch(3, 3)
+		layout.setColumnStretch(4, 3)
 
 		layout.addWidget(self.configZone()	, 0, 0, 3, 1)	# left zone
-		layout.addWidget(self.btnTrain		, 0, 1)   # button goes in upper-left
-		layout.addWidget(self.btnPlay		, 0, 2)   # text edit goes in middle-left
-		layout.addWidget(self.btnPause		, 0, 3)  # list widget goes in bottom-left
-		layout.addWidget(self.plotArea		, 1, 1, 1, 3)  # plot goes on right side, spanning 3 rows
-		layout.addWidget(self.fftArea		, 2, 1, 1, 3)  # plot goes on right side, spanning 3 rows
+		layout.addWidget(self.btnTrain		, 0, 1)
+		layout.addWidget(self.btnPlay		, 0, 2)
+		layout.addWidget(self.btnTerminate	, 0, 3)
+		layout.addWidget(self.btnPause		, 0, 4)
+		layout.addWidget(self.plotArea		, 1, 1, 1, 4)  # plot goes on right side, spanning 3 rows
+		layout.addWidget(self.fftArea		, 2, 1, 1, 4)  # plot goes on right side, spanning 3 rows
 
 		self.resize(1200,500)
 		self.setWindowTitle("EMG RECOGNITION SYSTEM")
@@ -94,9 +101,11 @@ class MainWindow(QtGui.QMainWindow):
 		widget.currentIndexChanged.connect(lambda x : self.slave.config('OUTPUT_TYPE',x))
 		self.outType = widget
 
-
 		self.calcTime = QtGui.QLabel('0')
-		self.slave.updateTime.connect(lambda x : self.calcTime.setText("  >> %d"%(x)))
+		self.slave.updateTime.connect(lambda x : self.calcTime.setText("  >> %s"%(x)))
+
+		self.actLabel = QtGui.QLabel('None')
+		self.slave.updateAct.connect(lambda x : self.actLabel.setText("  %s"%(x)))
 
 		layout.setRowStretch(0, 100)
 		layout.addWidget(QtGui.QLabel('') 							, 0,0)
@@ -112,6 +121,8 @@ class MainWindow(QtGui.QMainWindow):
 		layout.addWidget(self.outType								, 10,0)
 		layout.addWidget(QtGui.QLabel('Calculation Time')			, 11,0)
 		layout.addWidget(self.calcTime								, 12,0)
+		layout.addWidget(QtGui.QLabel('Current Activity')			, 13,0)
+		layout.addWidget(self.actLabel								, 14,0)
 
 		return w
 
@@ -127,7 +138,11 @@ class MainWindow(QtGui.QMainWindow):
 
 	@QtCore.pyqtSlot()
 	def btnPauseFN(self):
-		self.slave.paused = True
+		self.slave.paused = self.btnPause.isChecked()
+
+	@QtCore.pyqtSlot()
+	def btnTerminateFN(self):
+		self.slave.terminate = True
 
 	@QtCore.pyqtSlot(int)
 	def updateRaw(self,data_new):
@@ -139,17 +154,33 @@ class MainWindow(QtGui.QMainWindow):
 		specItem.plot(fft_result,clear=True, symbolBrush=(255,0,0))
 
 	def btnTrain_slave(self):
-		self.slave.paused = False
+		self.btnPlay.setDisabled(True)
 		self.btnTrain.setDisabled(True)
-		self.btnPause.setDisabled(False)
-		self.slave.trian(0)
+		self.btnTerminate.setDisabled(False)
+		self.slave.train(0)
+		self.btnPlay.setDisabled(False)
 		self.btnTrain.setDisabled(False)
-		self.btnPause.setDisabled(True)
+		self.btnTerminate.setDisabled(True)
 
 	def btnPlay_slave(self):
-		self.slave.paused = False
 		self.btnPlay.setDisabled(True)
-		self.btnPause.setDisabled(False)
+		self.btnTrain.setDisabled(True)
+		self.btnTerminate.setDisabled(False)
 		self.slave.play(0)
 		self.btnPlay.setDisabled(False)
-		self.btnPause.setDisabled(True)
+		self.btnTrain.setDisabled(False)
+		self.btnTerminate.setDisabled(True)
+
+	def keyPressEvent(self, event):
+	    if type(event) == QtGui.QKeyEvent and event.key() == QtCore.Qt.Key_A : 
+	    	self.slave.activity = ('CIR_L',1)
+	    elif type(event) == QtGui.QKeyEvent and event.key() == QtCore.Qt.Key_S:
+	    	self.slave.activity = ('FLEX',2)
+	    elif type(event) == QtGui.QKeyEvent and event.key() == QtCore.Qt.Key_D:
+	    	self.slave.activity = ('CIR_R',3)
+	    elif type(event) == QtGui.QKeyEvent and event.key() == QtCore.Qt.Key_W:
+	    	self.slave.activity = ('EXTD',4)
+	    elif type(event) == QtGui.QKeyEvent and event.key() == QtCore.Qt.Key_Q:
+	    	self.slave.activity = ('REST',5)
+	    elif type(event) == QtGui.QKeyEvent and event.key() == QtCore.Qt.Key_E:
+	    	self.slave.activity = ('None',0)
