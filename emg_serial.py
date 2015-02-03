@@ -1,7 +1,9 @@
 import serial,sys
 import os
+import glob
 
-COMPORT = 'COM4'
+# COMPORT = '/dev/tty.usbmodemfa131'
+COMPORT = '/dev/tty.usbmodemfd121'
 BAUDRATE = 57600
 
 PACKETLEN = 17
@@ -43,12 +45,12 @@ class SerialManager(object) :
 		return result
 
 	def recieve(self):
-		package = Package(self.ser.read(PACKETLEN))
-		if not package :
+		try :
+			package = Package(self.ser.read(PACKETLEN))
+			return package
+		except :
 			self.ser.read(1)
 			return self.recieve()
-		else :
-			return package
 
 	def close(self):
 		self.ser.close()
@@ -68,7 +70,9 @@ class Package(object) :
 
 	def __init__(self,raw_package):
 		if not Package.isValid(raw_package) :
-			return None
+			raise Exception('Package is not valid.')
 
 		ch1h,ch1l = IDXCH1
 		self.ch1 = (ord(raw_package[ch1h]) << 8) | ord(raw_package[ch1l])
+
+
