@@ -1,84 +1,97 @@
 from emg_serial import SerialManager
 from emg_fft import FeatureExtractor
-from emg_train import MotionModel
-from emg_recog import recognize
+from emg_recog import Recognition
+from main_ui import MainWindow
 
+import sys
+import time
 import datetime
-import msvcrt
-import os
 import numpy as np
-# asks whether a key has been acquired
-def kbfunc():
-	# this is boolean for whether the keyboard has bene hit
-	x = msvcrt.kbhit()
-	if x:
-		# getch acquires the character encoded in binary ASCII
-		ret = msvcrt.getch()
-		ret = ret.decode()
-	else:
-		ret = None
-	return ret
 
-def start(sec,train_only,debug):
-	ser = SerialManager()
-	extr = FeatureExtractor(recognize,train_only=train_only,debug=debug)
+from PyQt4 import QtGui, QtCore
 
-	start = datetime.datetime.now()
+current_milli_time = lambda: int(round(time.time() * 1000))
 
-	if sec <= 0 :
-		infinite = True
-	else :
-		infinite = False
-
-	r = 0
-	while infinite or r < sec :
-		if kbfunc() == 's' :
-			break
-		for i in range(256) :
-			pack = ser.recieve()
-			extr.gather(pack.ch1)
-		r += 1
-
-	interval = datetime.datetime.now() - start
-	print interval
+class WorkingThread(QtCore.QObject):
 	
-	ser.close()
-	return extr.storage
+	updateTime = QtCore.pyqtSignal(int)
+	updateRaw = QtCore.pyqtSignal(int)
+	updateFFT = QtCore.pyqtSignal(list)
 
-def trian(sec=10):
-	storage = start(sec=sec,train_only=True,debug=True)
-	time.sleep(2)
-	storage = zip(*storage)
+	def __init__(self):
+		super(WorkingThread, self).__init__()
+		self.paused = False
+		self.message = False
+		self._config = {}
 
-	model = MotionModel(MotionModel.FILE_FLEX)
+	def config(self,key,value):
+		self._config[key] = int(value)
 
-	model.average = map(np.average ,storage)
-	model.stdev = map(np.std ,storage)
-	model.max = map(np.max ,storage)
-	model.min = map(np.min ,storage)
+	def start(self,sec,train,debug):
 
-	print "SUMMARIZED"
-	printMagnitude(model.average)
-	printMagnitude(model.stdev)
+		# ser = SerialManager()
+		extr = FeatureExtractor(**self._config)
+		begin = datetime.datetime.now()
 
-	model.save()
+		if trian :
+			mem = open(begin.strftime("recog %y%m%d-%H%M.txt"),'w')
 
-def play(sec=1):
-	start(sec=sec,train_only=False,debug=False)
-
-try :
-	a = ""
-	try :
-		a = raw_input("--> type function to start :: ")
-	except :
-		play(40)
-	else :
-		if a == "train" :
-			trian(10)
-		elif a == "play" :
-			play(0)
+		if sec <= 0 :
+			infinite = True
 		else :
-			print a + " is not function"
+			infinite = False
+
+		r = 0
+		while infinite or r < sec :
+			for i in range(256) :
+
+				time.sleep(0.003)
+				# data = ser.recieve().ch1
+				calctime = current_milli_time()
+				data = np.random.uniform(0,1024)
+				self.updateRaw.emit(data)
+
+				result = extr.gather(data)
+
+				if result : 
+					self.updateTime.emit(current_milli_time() - calctime)
+					self.updateFFT.emit(result)
+
+					if trian :
+						mem.write("%s\n"%(", ".join(map(lambda x: "%.05f"%x ,result))))
+					if debug :
+						printMagnitude(result)
+
+				if self.paused :
+					infinite = False
+					sec = 0
+					break
+
+			# print "NOOB"
+			r += 1
+
+		# interval = datetime.datetime.now() - begin
+		# print interval
 		
-except Exception as e :
-	print e.message
+		if trian :
+			mem.close()
+
+		# ser.close()
+
+	def trian(self,sec=1):
+		self.start(sec=sec,train=True,debug=False)
+
+	def play(self,sec=1):
+		self.start(sec=sec,train=False,debug=False)
+
+
+def printMagnitude(result) :
+	result = map(lambda a: "%.03f"%(a) ,result)
+
+	print ",".join(result)
+
+if __name__ == '__main__':
+	app = QtGui.QApplication(sys.argv)
+	main = MainWindow(WorkingThread)
+	main.show()
+	sys.exit(app.exec_())

@@ -1,82 +1,15 @@
-from emg_serial import SerialManager
 from emg_fft import FeatureExtractor
-from emg_train import MotionModel
-from emg_recog import recognize
-
-import sys
-import time
 import threading
-import datetime
-import numpy as np
 
 from PyQt4 import QtGui, QtCore
-from PyQt4 import Qwt5 as Qwt
 import pyqtgraph as pg
 from customplot import SlidingPlot
 
-class WorkingThread(QtCore.QObject):
-	
-	updateRaw = QtCore.pyqtSignal(int)
-	updateFFT = QtCore.pyqtSignal(list)
-
-	def __init__(self):
-		super(WorkingThread, self).__init__()
-		self.paused = False
-		self.message = False
-
-	def start(self,sec,train,debug):
-
-		ser = SerialManager()
-		extr = FeatureExtractor()
-
-		begin = datetime.datetime.now()
-
-		if self.trian :
-			mem = open(begin.strftime("recog %y%m%d-%H%M.txt"),'w')
-
-		if sec <= 0 :
-			infinite = True
-		else :
-			infinite = False
-
-		r = 0
-		while infinite or r < sec :
-			if self.paused :
-				break
-			for i in range(256) :
-				pack = ser.recieve()
-				result = extr.gather(pack.ch1)
-
-				self.updateRaw.emit(pack.ch1)
-
-				if result : 
-					self.updateFFT.emit(result)
-					if self.trian :
-						mem.write("%s\n"%(", ".join(map(lambda x: "%.05f"%x ,result))))
-					if debug :
-						printMagnitude(result)
-
-			r += 1
-
-		interval = datetime.datetime.now() - begin
-		print interval
-		
-		if self.trian :
-			mem.close()
-
-		ser.close()
-
-	def trian(self,sec=1):
-		self.start(sec=sec,train=True,debug=False)
-
-	def play(self,sec=1):
-		self.start(sec=sec,train=False,debug=False)
-
 class MainWindow(QtGui.QMainWindow):
 	"""docstring for MainWindow"""
-	def __init__(self):
+	def __init__(self,Slave):
 		QtGui.QMainWindow.__init__(self)
-		self.slave = WorkingThread()
+		self.slave = Slave()
 		
 		layout = QtGui.QGridLayout()
 		
@@ -103,19 +36,84 @@ class MainWindow(QtGui.QMainWindow):
 		self.plotArea = widget
 
 		widget = pg.PlotWidget(lockAspect=True, enableMouse=False, enableMenu=False)
-
 		widget.setYRange(0,500)
 		self.slave.updateFFT.connect(self.updateFFT)
 		self.fftArea = widget
 
-		layout.addWidget(self.btnTrain	, 0, 0)   # button goes in upper-left
-		layout.addWidget(self.btnPlay	, 0, 1)   # text edit goes in middle-left
-		layout.addWidget(self.btnPause	, 0, 2)  # list widget goes in bottom-left
-		layout.addWidget(self.plotArea	, 1, 0, 1, 3)  # plot goes on right side, spanning 3 rows
-		layout.addWidget(self.fftArea	, 2, 0, 1, 3)  # plot goes on right side, spanning 3 rows
+		layout.setColumnStretch(0, 1)
+		layout.setColumnStretch(1, 3)
+		layout.setColumnStretch(2, 3)
+		layout.setColumnStretch(3, 3)
+
+		layout.addWidget(self.configZone()	, 0, 0, 3, 1)	# left zone
+		layout.addWidget(self.btnTrain		, 0, 1)   # button goes in upper-left
+		layout.addWidget(self.btnPlay		, 0, 2)   # text edit goes in middle-left
+		layout.addWidget(self.btnPause		, 0, 3)  # list widget goes in bottom-left
+		layout.addWidget(self.plotArea		, 1, 1, 1, 3)  # plot goes on right side, spanning 3 rows
+		layout.addWidget(self.fftArea		, 2, 1, 1, 3)  # plot goes on right side, spanning 3 rows
 
 		self.resize(1200,500)
 		self.setWindowTitle("EMG RECOGNITION SYSTEM")
+
+	def configZone(self):
+		layout = QtGui.QGridLayout()
+		w = QtGui.QWidget()
+		w.setLayout(layout)
+		w.resize(100,300)
+
+		widget = QtGui.QSpinBox()
+		widget.setMaximum(25600)
+		widget.setLocale(QtCore.QLocale(QtCore.QLocale.English,QtCore.QLocale.UnitedStates))
+		widget.setValue(FeatureExtractor.DEFAULT_CALC_SIZE)
+		widget.valueChanged.connect(lambda x : self.slave.config('CALC_SIZE',x))
+		self.calcSize = widget
+		
+		widget = QtGui.QSpinBox()
+		widget.setLocale(QtCore.QLocale(QtCore.QLocale.English,QtCore.QLocale.UnitedStates))
+		widget.setValue(FeatureExtractor.DEFAULT_SLIDING_SIZE)
+		widget.valueChanged.connect(lambda x : self.slave.config('SLIDING_SIZE',x))
+		self.slideSize = widget
+
+		widget = QtGui.QSpinBox()
+		widget.setLocale(QtCore.QLocale(QtCore.QLocale.English,QtCore.QLocale.UnitedStates))
+		widget.setValue(FeatureExtractor.DEFAULT_FREQ_DOMAIN)
+		widget.valueChanged.connect(lambda x : self.slave.config('FREQ_DOMAIN',x))
+		self.freqSize = widget
+
+		widget = QtGui.QSpinBox()
+		widget.setLocale(QtCore.QLocale(QtCore.QLocale.English,QtCore.QLocale.UnitedStates))
+		widget.setValue(FeatureExtractor.DEFAULT_TREND_CHUNK)
+		widget.valueChanged.connect(lambda x : self.slave.config('TREND_CHUNK',x))
+		self.trendSize = widget
+
+		widget = QtGui.QComboBox()
+		widget.setLocale(QtCore.QLocale(QtCore.QLocale.English,QtCore.QLocale.UnitedStates))
+		widget.addItem("RAW")
+		widget.addItem("DIFF")
+		widget.addItem("TREND")
+		widget.currentIndexChanged.connect(lambda x : self.slave.config('OUTPUT_TYPE',x))
+		self.outType = widget
+
+
+		self.calcTime = QtGui.QLabel('0')
+		self.slave.updateTime.connect(lambda x : self.calcTime.setText("  >> %d"%(x)))
+
+		layout.setRowStretch(0, 100)
+		layout.addWidget(QtGui.QLabel('') 							, 0,0)
+		layout.addWidget(QtGui.QLabel('Calculation Chunk Size') 	, 1,0)
+		layout.addWidget(self.calcSize								, 2,0)
+		layout.addWidget(QtGui.QLabel('Sliding Step') 				, 3,0)
+		layout.addWidget(self.slideSize								, 4,0)
+		layout.addWidget(QtGui.QLabel('Frequency Domain') 			, 5,0)
+		layout.addWidget(self.freqSize								, 6,0)
+		layout.addWidget(QtGui.QLabel('Trend Chunk Size') 			, 7,0)
+		layout.addWidget(self.trendSize								, 8,0)
+		layout.addWidget(QtGui.QLabel('Output Type') 				, 9,0)
+		layout.addWidget(self.outType								, 10,0)
+		layout.addWidget(QtGui.QLabel('Calculation Time')			, 11,0)
+		layout.addWidget(self.calcTime								, 12,0)
+
+		return w
 
 	@QtCore.pyqtSlot()
 	def btnTrainFN(self):
@@ -155,17 +153,3 @@ class MainWindow(QtGui.QMainWindow):
 		self.slave.play(0)
 		self.btnPlay.setDisabled(False)
 		self.btnPause.setDisabled(True)
-
-if __name__ == '__main__':
-	app = QtGui.QApplication(sys.argv)
-	main = MainWindow()
-	main.show()
-	sys.exit(app.exec_())
-
-def printMagnitude(result) :
-	result = map(lambda a: "%.03f"%(a) ,result)
-
-	for data in result :
-		print data + ",",
-
-	print ""
