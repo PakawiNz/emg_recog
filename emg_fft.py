@@ -36,10 +36,14 @@ class FeatureExtractor(object) :
 			(a*self.CALC_SIZE/self.FREQ_DOMAIN,(a+1)*self.CALC_SIZE/self.FREQ_DOMAIN),
 			range(self.FREQ_DOMAIN))
 
+		self.clearBuffer()
+
+	def clearBuffer(self) :
 		self.inBuffer = [0]*self.CALC_SIZE*BUFFER_SIZE
 		self.header = 0
 		self.counter = 0
-		
+		self.TAIL = self.CALC_SIZE * (BUFFER_SIZE-1) - self.CALC_SIZE % self.SLIDING_SIZE
+
 		if self.OUTPUT_TYPE == FT.OUTPUT_TREND :
 			self.tempResult = []
 		elif self.OUTPUT_TYPE == FT.OUTPUT_DIFF :
@@ -48,10 +52,11 @@ class FeatureExtractor(object) :
 	def gather(self,data) :
 		adj_data = (data-DATA_RANGE/2.0)/DATA_RANGE
 		target = self.header + self.counter
+		# print self.header, self.counter, target, target - self.TAIL, self.TAIL
 
 		self.inBuffer[target] = adj_data
-		if target >= self.CALC_SIZE * (BUFFER_SIZE-1) :
-			self.inBuffer[target - self.CALC_SIZE * (BUFFER_SIZE-1)] = adj_data
+		if target >= self.TAIL :
+			self.inBuffer[target - self.TAIL] = adj_data
 
 		self.counter += 1
 
@@ -61,14 +66,16 @@ class FeatureExtractor(object) :
 		else :
 			readyCalc = False
 
+		result = None
 		if readyCalc :
+			# print "CALC %s"%self.header
 			result = self.calc(self.inBuffer,self.header)
-
 			self.header += self.SLIDING_SIZE
-			if self.header + self.CALC_SIZE == self.CALC_SIZE * BUFFER_SIZE :
-				self.header = 0
 
-			return result
+		if target - self.TAIL == self.CALC_SIZE - 1 :
+			self.header = target - self.TAIL - self.counter + 1
+
+		return result
 
 	def calc(self,raw_data,header) :
 		out = np.fft.fft(raw_data[header:header+self.CALC_SIZE])
