@@ -42,7 +42,8 @@ class FeatureExtractor(object) :
 		self.inBuffer = [0]*self.CALC_SIZE*BUFFER_SIZE
 		self.header = 0
 		self.counter = 0
-		self.TAIL = self.CALC_SIZE * (BUFFER_SIZE-1) - self.CALC_SIZE % self.SLIDING_SIZE
+		self.TAIL = self.CALC_SIZE * (BUFFER_SIZE-1)
+		self.TAIL += (self.SLIDING_SIZE - self.TAIL % self.SLIDING_SIZE)
 
 		if self.OUTPUT_TYPE == FT.OUTPUT_TREND :
 			self.tempResult = []
@@ -72,8 +73,8 @@ class FeatureExtractor(object) :
 			result = self.calc(self.inBuffer,self.header)
 			self.header += self.SLIDING_SIZE
 
-		if target - self.TAIL == self.CALC_SIZE - 1 :
-			self.header = target - self.TAIL - self.counter + 1
+		if target == len(self.inBuffer) - 1 :
+			self.header = 0
 
 		return result
 
