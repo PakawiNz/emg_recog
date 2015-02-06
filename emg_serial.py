@@ -6,7 +6,12 @@ COMPORT = '/dev/tty.usbmodemfd121'
 BAUDRATE = 57600
 
 PACKETLEN = 17
-IDXCH1 = (4,5)
+IDXCH1H,IDXCH1L = 4,5
+IDXCH2H,IDXCH2L = 6,7
+IDXCH3H,IDXCH3L = 8,9
+IDXCH4H,IDXCH4L = 10,11
+IDXCH5H,IDXCH5L = 12,13
+IDXCH6H,IDXCH6L = 14,15
 
 class SerialManager(object) :
 
@@ -60,9 +65,9 @@ class Package(object) :
 	def isValid(raw_package):
 		if len(raw_package) != PACKETLEN :
 			return False
-		if ord(raw_package[0]) != 165 :
+		if ord(raw_package[0]) != 0xa5 :
 			return False
-		if ord(raw_package[1]) != 90 :
+		if ord(raw_package[1]) != 0x5a :
 			return False
 
 		return True
@@ -71,7 +76,11 @@ class Package(object) :
 		if not Package.isValid(raw_package) :
 			raise Exception('Package is not valid.')
 
-		ch1h,ch1l = IDXCH1
-		self.ch1 = (ord(raw_package[ch1h]) << 8) | ord(raw_package[ch1l])
+		self.ch1 = (ord(raw_package[IDXCH1H]) << 8) | ord(raw_package[IDXCH1L])
+		self.ch2 = (ord(raw_package[IDXCH2H]) << 8) | ord(raw_package[IDXCH2L])
+		self.ch3 = (ord(raw_package[IDXCH3H]) << 8) | ord(raw_package[IDXCH3L])
+		self.ch4 = (ord(raw_package[IDXCH4H]) << 8) | ord(raw_package[IDXCH4L])
+		self.ch5 = (ord(raw_package[IDXCH5H]) << 8) | ord(raw_package[IDXCH5L])
+		self.ch6 = (ord(raw_package[IDXCH6H]) << 8) | ord(raw_package[IDXCH6L])
 
 
