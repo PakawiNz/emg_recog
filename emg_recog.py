@@ -33,18 +33,17 @@ class Recognition(object):
 	def __init__(self,freq_domain):
 		super(Recognition, self).__init__()
 		self._ds = SupervisedDataSet(freq_domain, 1)
-		self._net = buildNetwork(freq_domain, freq_domain*3/4, freq_domain*2/4, freq_domain*1/4, 1, bias=True)
+		self._net = buildNetwork(freq_domain, freq_domain*3/4, freq_domain*2/4, freq_domain*1/4, 1)
 		self._trainer = BackpropTrainer(self._net, self._ds)
 
 	def addSample(self,features,activity):
 		self._ds.addSample(features,activity)
 
-	def training(self,epochs,update):
+	def training(self,epochs,update=None):
 		for i in range(epochs):
 			self._trainer.train()
-			update(float(i*100)/epochs)
+			if update :
+				update(float(i*100)/epochs)
 
 	def recognize(self,features):
 		print self._net.activate(features)
-
-

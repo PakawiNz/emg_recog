@@ -38,7 +38,7 @@ class WorkingThread(QtCore.QObject):
 		begin = datetime.datetime.now()
 
 		if train :
-			mem = open(begin.strftime("recog %y%m%d-%H%M.txt"),'w')
+			
 			if not self._recog :
 				self._recog = Recognition(extr.FREQ_DOMAIN)
 
@@ -69,11 +69,9 @@ class WorkingThread(QtCore.QObject):
 					if debug : printMagnitude(result)
 
 					if train :
-						# mem.write("%s\n"%(", ".join(map(lambda x: "%.05f"%x ,result))))
+						self.updateAct.emit(self.activity[0] if self.activity else "None")
 						if self.activity :
-							self.updateAct.emit(self.activity[0])
-							if self.activity[1]:
-								self._recog.addSample(result, self.activity[1])
+							self._recog.addSample(result, self.activity[1])
 					elif self._recog :
 						self._recog.recognize(result)
 				## -----------------------------------------------------------------------------
@@ -85,13 +83,38 @@ class WorkingThread(QtCore.QObject):
 		ser.close()
 		
 		if train :
-			mem.close()
 			self._recog.training(500,lambda x: self.updateAct.emit("TRAINING %.02f"%(x)))
 			self.updateAct.emit("FINISHED")
 
+	def datastore(self):
+		# ser = SerialManager()
+		self.terminate = False
+		self.activity = None
+		lastActivity = 0
+
+		count = 0
+		mem = open(datetime.datetime.now().strftime("recog %y%m%d-%H%M.txt"),'w')
+		while not self.terminate :
+			time.sleep(0.003)
+			data = np.random.uniform(0,1024)
+			# data = ser.recieve().ch1
+			self.updateRaw.emit(data)
+
+			if self.activity :
+				count += 1
+				self.updateTime.emit("%d"%(count))
+				if lastActivity != self.activity[1] :
+					lastActivity = self.activity[1]
+					mem.write("%.03f,%s "%(data,lastActivity))
+				else :
+					mem.write("%.03f "%(data))
+
+		mem.close()
+		self.updateTime.emit("0")
 
 	def train(self,sec=1):
-		self.start(sec=sec,train=True,debug=False)
+		self.datastore()
+		# self.start(sec=sec,train=True,debug=False)
 
 	def play(self,sec=1):
 		self.start(sec=sec,train=False,debug=False)

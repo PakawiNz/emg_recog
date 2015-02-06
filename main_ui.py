@@ -183,4 +183,4 @@ class MainWindow(QtGui.QMainWindow):
 	    elif type(event) == QtGui.QKeyEvent and event.key() == QtCore.Qt.Key_Q:
 	    	self.slave.activity = ('REST',5)
 	    elif type(event) == QtGui.QKeyEvent and event.key() == QtCore.Qt.Key_E:
-	    	self.slave.activity = ('None',0)
+	    	self.slave.activity = None
