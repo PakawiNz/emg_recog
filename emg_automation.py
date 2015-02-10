@@ -1,11 +1,12 @@
 from emg_fft import FeatureExtractor
-from emg_recog import Recognition,CustomRecognition
+from emg_recog import CustomRecognition
 
 from pybrain import structure as STRUCT
 from pybrain.supervised import BackpropTrainer, RPropMinusTrainer
 import itertools,re
 import time
 import traceback
+import numpy as np
 
 CALC_SIZE = [128,256,512,1024]
 SLIDING_SIZE = [4,8,12,16,20]
@@ -84,7 +85,12 @@ class Automation(object) :
 		return result
 
 	def compare_fft(self) :
-		elementANN = (STRUCT.LinearLayer,STRUCT.FullConnection,STRUCT.SoftmaxLayer,STRUCT.FullConnection,STRUCT.SigmoidLayer,0,STRUCT.FeedForwardNetwork,BackpropTrainer)
+		elementANN = (
+			STRUCT.LinearLayer,STRUCT.FullConnection,
+			STRUCT.SoftmaxLayer,STRUCT.FullConnection,
+			STRUCT.SigmoidLayer,STRUCT.FullConnection,
+			STRUCT.FeedForwardNetwork,BackpropTrainer)
+
 		rawdata = self.get_rawdata('recog 150206.txt')
 
 		cartesian = list(itertools.product(*AUTOMATION1))
@@ -104,11 +110,14 @@ class Automation(object) :
 
 				recog = CustomRecognition(elementFFT[3],*elementANN)
 				map(lambda x : recog.addSample(*x),features)
+
 				err = recog.training(20)
 				acc = recog.validate()
 
 				try :
-					text = "\t".join(['>'*10] + map(lambda x: "%d"%x,elementFFT) + ["%.3f"%t_fill,"%.3f"%t_calc,"%.3f"%acc] + map(lambda x: "%.3f"%x,err))
+					text = "\t".join(
+						['>'*10] + map(lambda x: "%d"%x,elementFFT) + 
+						["%.3f"%t_fill,"%.3f"%t_calc,"%.3f"%acc] + map(lambda x: "%.3f"%x,err))
 					afile.write(text + "\n")
 					print ">> SUCCESS"
 				except :
@@ -123,37 +132,46 @@ class Automation(object) :
 		exit()
 
 
-	def compare_ann(self):
+	def compare_ann(self,feature=None):
 		elementFFT = [0,128,4,8,0]
 		rawdata = self.get_rawdata('recog 150206.txt')
-		features = feature_extr(elementFFT, rawdata, profile=False)
+		if not feature :
+			features = feature_extr(elementFFT, rawdata, profile=False)
 
-		from temp2 import elements
-		cartesian = elements
-		# cartesian = list(itertools.product([STRUCT.FeedForwardNetwork],NN_LAYER,NN_LAYER,NN_LAYER))
+		# from temp2 import elements
+		# cartesian = elements
+		cartesian = list(itertools.product([STRUCT.FeedForwardNetwork],NN_LAYER,NN_LAYER,NN_LAYER,NN_LAYER))
 		print "ann variation = %d"%len(cartesian)
 
-		ds = Recognition.buildTrianingSet(features)
+		ds = CustomRecognition.buildTrianingSet(features)
 
 		count = 0
 		afile = open('result compare_ann.txt','a+')
-		for network,inlayer,hidlayer,outlayer in cartesian[count:] :
-			text = "\t".join([str(count),'>'*10,network.__name__,inlayer.__name__,hidlayer.__name__,outlayer.__name__])
+		for network,inlayer,hidlayer1,hidlayer2,outlayer in cartesian[count:] :
+			text = "\t".join([str(count),'>'*10,network.__name__,inlayer.__name__,hidlayer1.__name__,hidlayer2.__name__,outlayer.__name__])
 			print text
 			count += 1
 			try :
 				if self.terminate :
 					break
 
-				elementANN = (len(features[0][0]),inlayer, STRUCT.FullConnection, outlayer, STRUCT.FullConnection, hidlayer, 0, network, BackpropTrainer)
-				recog = CustomRecognition(*elementANN,reusedDataSet=ds)
+				elementANN = (
+					inlayer, STRUCT.FullConnection, 
+					outlayer, STRUCT.FullConnection, 
+					[hidlayer1,hidlayer2], STRUCT.FullConnection, 
+					network, BackpropTrainer)
 
-				err = recog.training(250)
+				recog = CustomRecognition(len(features[0][0]),*elementANN,reusedDataSet=ds)
+
+				err = recog.training(2)
 				acc = recog.validate()
 				res = recog.recognize(features[0][0])
 				rec = CustomRecognition.convertToMotion(res)
+
 				try :
-					text = "\t".join(['>'*10,network.__name__,inlayer.__name__,hidlayer.__name__,outlayer.__name__] + ["%.3f"%acc,"%d"%rec,] + map(lambda x: "%.3f"%x,res) + map(lambda x: "%.3f"%x,err))
+					text = "\t".join(
+						['>'*10,network.__name__,inlayer.__name__,hidlayer1.__name__,hidlayer2.__name__,outlayer.__name__] + 
+						["%.3f"%acc,"%d"%rec,] + map(lambda x: "%.3f"%x,res) + map(lambda x: "%.3f"%x,err))
 					afile.write(text + "\n")
 					print ">> SUCCESS"
 				except :

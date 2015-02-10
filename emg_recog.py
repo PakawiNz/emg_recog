@@ -56,23 +56,36 @@ class Recognition(object):
 		idx = max(range(len(alist)), key=lambda i: alist[i])
 		return idx
 
+def optimalHiddenSize(input_size,output_size,hidden_layer):
+	diff = float(input_size - output_size)/(hidden_layer + 1)
+	return map(lambda x: round(input_size - (x+1)*diff) , range(hidden_layer))
+
 class CustomRecognition(Recognition):
 	"""docstring for CustomRecognition"""
-	def __init__(self,freq_domain,InputLayer,InputConnecton,OutputLayer,OutputConnection,HiddenLayer,HiddenSize,NetworkType,TrainerType,reusedDataSet=None):
+	def __init__(self,freq_domain,InputLayer,InputConnecton,OutputLayer,OutputConnection,HiddenLayer,HiddenConnection,NetworkType,TrainerType,reusedDataSet=None):
 		super(CustomRecognition, self).__init__(freq_domain)
 
+		if type(HiddenLayer) not in (list,tuple) :
+			HiddenLayer = [HiddenLayer]
+		if type(HiddenConnection) not in (list,tuple) :
+			HiddenConnection = [HiddenConnection]*len(HiddenLayer)
+		if len(HiddenConnection) != len(HiddenLayer)-1 :
+			raise Exception(">"*10 + "HIDDEN LAYER AND CONNECTION SIZE MISSMATCH")
+
 		inputLayer = InputLayer(freq_domain)
-		hiddenLayer = HiddenLayer(freq_domain*2)
+		hiddenLayer = map(lambda x:x[0](x[1]), zip(HiddenLayer,optimalHiddenSize(freq_domain,OUTPUTSIZE,len(HiddenLayer))))
 		outputLayer = OutputLayer(OUTPUTSIZE)
 
-		in_to_hi = InputConnecton(inputLayer, hiddenLayer)
-		hi_to_out = OutputConnection(hiddenLayer, outputLayer)
+		in_to_hi = InputConnecton(inputLayer, hiddenLayer[0])
+		hi_to_hi = map(lambda x:x[0](x[1],x[2]), zip(HiddenConnection,hiddenLayer,hiddenLayer[1:]))
+		hi_to_out = OutputConnection(hiddenLayer[-1], outputLayer)
 
 		net = NetworkType()
 		net.addInputModule(inputLayer)
-		net.addModule(hiddenLayer)
+		map(net.addModule,hiddenLayer)
 		net.addOutputModule(outputLayer)
 		net.addConnection(in_to_hi)
+		map(net.addConnection,hi_to_hi)
 		net.addConnection(hi_to_out)
 		net.sortModules()
 
@@ -83,21 +96,21 @@ class CustomRecognition(Recognition):
 		self._net = net
 		self._trainer = trainer
 
-test = [([1,2,3],1),
-		([2,2,3],2),
-		([3,2,3],3),
-		([4,2,3],4),
-		([5,2,3],5),]
-		
-if __name__ == '__main__':
-	for i in range(10):
-		network,inlayer,hidlayer,outlayer = (STRUCT.FeedForwardNetwork,STRUCT.LinearLayer,STRUCT.MultiplicationLayer,STRUCT.SoftmaxLayer)
-		recog = CustomRecognition(3,inlayer, STRUCT.FullConnection, outlayer, STRUCT.FullConnection, hidlayer, 0, network, BackpropTrainer)
-		map(lambda x : recog.addSample(*x),test)
-		err = recog.training(10)
-		acc = recog.validate()
-		res = recog.recognize(test[0][0])
-		rec = Recognition.convertToMotion(res)
+# if __name__ == '__main__':
+# 	test = [([1,2,3],1),
+# 			([2,2,3],2),
+# 			([3,2,3],3),
+# 			([4,2,3],4),
+# 			([5,2,3],5),]
 
-		text = "\t".join(['>'*10,"%.3f"%err,"%.3f"%acc,"%d"%rec,] + map(lambda x: "%.3f"%x,res))
-		print text
+# 	for i in range(10):
+# 		network,inlayer,hidlayer,outlayer = (STRUCT.FeedForwardNetwork,STRUCT.LinearLayer,STRUCT.MultiplicationLayer,STRUCT.SoftmaxLayer)
+# 		recog = CustomRecognition(3,inlayer, STRUCT.FullConnection, outlayer, STRUCT.FullConnection, hidlayer, 0, network, BackpropTrainer)
+# 		map(lambda x : recog.addSample(*x),test)
+# 		err = recog.training(10)
+# 		acc = recog.validate()
+# 		res = recog.recognize(test[0][0])
+# 		rec = Recognition.convertToMotion(res)
+
+# 		text = "\t".join(['>'*10,"%.3f"%err,"%.3f"%acc,"%d"%rec,] + map(lambda x: "%.3f"%x,res))
+# 		print text
