@@ -84,40 +84,8 @@ class WorkingThread(QtCore.QObject):
 			self._recog.training(500,lambda x,y: self.updateAct.emit("TRAINING %.02f"%(x)))
 			self.updateAct.emit("FINISHED")
 
-	def datastore(self):
-		ser = SerialManager()
-		self.terminate = False
-		self.activity = None
-		lastActivity = 0
-
-		count = 0
-		mem = open(datetime.datetime.now().strftime("recog %y%m%d.txt"),'a+')
-		while not self.terminate :
-			# time.sleep(0.003)
-			# data = np.random.uniform(0,1024)
-			data = ser.recieve().ch1
-			self.updateRaw.emit(data)
-
-			if self.activity :
-				count += 1
-				self.updateTime.emit("%d"%(count))
-				if lastActivity != self.activity[1] :
-					lastActivity = self.activity[1]
-					mem.write("%.03f,%s "%(data,lastActivity))
-				else :
-					mem.write("%.03f "%(data))
-
-		try:
-			ser.close()
-			mem.close()
-		except e:
-			pass
-			
-		self.updateTime.emit("0")
-
 	def train(self,sec=1):
-		self.datastore()
-		# self.start(sec=sec,train=True,debug=False)
+		self.start(sec=sec,train=True,debug=False)
 
 	def play(self,sec=1):
 		self.start(sec=sec,train=False,debug=False)
