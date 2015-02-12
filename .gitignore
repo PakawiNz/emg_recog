@@ -1,2 +1,4 @@
 *.pyc
 *.emg
+archived/
+result/

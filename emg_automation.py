@@ -47,6 +47,14 @@ def tuplation(x):
 	except :
 		return None
 
+def get_rawdata(filename) :
+	lines = open(filename,'r').readlines()
+	result = []
+	for line in lines :
+		line = re.split(r'\s+',line)
+		result += map(tuplation,line)
+	return result
+
 def feature_extr(config,dataset,profile=True):
 	extr = FeatureExtractor(*config)
 
@@ -82,14 +90,6 @@ class Automation(QtCore.QObject) :
 		super(Automation, self).__init__()
 		self.terminate = False
 
-	def get_rawdata(self, filename) :
-		lines = open(filename,'r').readlines()
-		result = []
-		for line in lines :
-			line = re.split(r'\s+',line)
-			result += map(tuplation,line)
-		return result
-
 	def compare_fft(self) :
 		elementANN = (
 			STRUCT.LinearLayer,STRUCT.FullConnection,
@@ -97,7 +97,7 @@ class Automation(QtCore.QObject) :
 			STRUCT.SigmoidLayer,STRUCT.FullConnection,
 			STRUCT.FeedForwardNetwork,BackpropTrainer)
 
-		rawdata = self.get_rawdata('result/recog 150206.txt')
+		rawdata = get_rawdata('result/recog 150206.txt')
 
 		cartesian = list(itertools.product(*AUTOMATION1))
 		print "fft variation = %d"%len(cartesian)
@@ -140,7 +140,7 @@ class Automation(QtCore.QObject) :
 
 	def compare_ann(self,feature=None):
 		elementFFT = [0,128,4,8,0]
-		rawdata = self.get_rawdata('result/recog 150206.txt')
+		rawdata = get_rawdata('result/recog 150206.txt')
 		if not feature :
 			features = feature_extr(elementFFT, rawdata, profile=False)
 

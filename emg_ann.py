@@ -101,12 +101,11 @@ sigmoidfn = lambda x: 1/(1+np.exp(-x))
 
 class Network(object):
 
-	def __init__(self,input_size,hidden_size,output_size):
+	def __init__(self,input_size,hidden_size,output_size,
+			input_function = linearfn,
+			hidden_function = sigmoidfn,
+			output_function = sigmoidfn):
 		super(Network, self).__init__()
-
-		input_function = linearfn
-		hidden_function = sigmoidfn
-		output_function = sigmoidfn
 
 		self.inputNodes = 	map(lambda x: Node(1,input_function), range(input_size))
 		self.hiddenNodes = 	map(lambda x: Node(input_size,hidden_function), range(hidden_size))
@@ -132,8 +131,6 @@ class Network(object):
 		map(lambda x: x[0].setWeight(x[1]), zip(self.outputNodes,weights[2]))
 
 	recognize = activate
-
-# print WEKA_CMD
 
 if __name__ == '__main__':
 	import itertools
