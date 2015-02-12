@@ -8,6 +8,9 @@ import time
 import traceback
 import numpy as np
 
+from PyQt4 import QtGui,QtCore
+import sys,threading
+
 CALC_SIZE = [128,256,512,1024]
 SLIDING_SIZE = [4,8,12,16,20]
 FREQ_DOMAIN = [8,16,64]
@@ -71,9 +74,12 @@ def feature_extr(config,dataset,profile=True):
 	else :
 		return features
 
-class Automation(object) :
+class Automation(QtCore.QObject) :
+
+	exitSignal = QtCore.pyqtSignal()
 
 	def __init__(self):
+		super(Automation, self).__init__()
 		self.terminate = False
 
 	def get_rawdata(self, filename) :
@@ -91,13 +97,13 @@ class Automation(object) :
 			STRUCT.SigmoidLayer,STRUCT.FullConnection,
 			STRUCT.FeedForwardNetwork,BackpropTrainer)
 
-		rawdata = self.get_rawdata('recog 150206.txt')
+		rawdata = self.get_rawdata('result/recog 150206.txt')
 
 		cartesian = list(itertools.product(*AUTOMATION1))
 		print "fft variation = %d"%len(cartesian)
 
 		count = 0
-		afile = open('result compare_fft.txt','a+')
+		afile = open('result/compare_fft.txt','a+')
 		for elementFFT in cartesian[count:] :
 			text = "\t".join([str(count),'>'*10] + map(lambda x: "%d"%x,elementFFT))
 			print text
@@ -134,19 +140,19 @@ class Automation(object) :
 
 	def compare_ann(self,feature=None):
 		elementFFT = [0,128,4,8,0]
-		rawdata = self.get_rawdata('recog 150206.txt')
+		rawdata = self.get_rawdata('result/recog 150206.txt')
 		if not feature :
 			features = feature_extr(elementFFT, rawdata, profile=False)
 
-		# from temp2 import elements
-		# cartesian = elements
-		cartesian = list(itertools.product([STRUCT.FeedForwardNetwork],NN_LAYER,NN_LAYER,NN_LAYER,NN_LAYER))
+		from temp2 import doublelayer_top_ten as elements
+		cartesian = elements*100
+		# cartesian = list(itertools.product([STRUCT.FeedForwardNetwork],NN_LAYER,NN_LAYER,NN_LAYER,NN_LAYER))
 		print "ann variation = %d"%len(cartesian)
 
 		ds = CustomRecognition.buildTrianingSet(features)
 
 		count = 0
-		afile = open('result compare_ann.txt','a+')
+		afile = open('result/compare_ann.txt','a+')
 		for network,inlayer,hidlayer1,hidlayer2,outlayer in cartesian[count:] :
 			text = "\t".join([str(count),'>'*10,network.__name__,inlayer.__name__,hidlayer1.__name__,hidlayer2.__name__,outlayer.__name__])
 			print text
@@ -162,41 +168,49 @@ class Automation(object) :
 					network, BackpropTrainer)
 
 				recog = CustomRecognition(len(features[0][0]),*elementANN,reusedDataSet=ds)
-
-				err = recog.training(2)
+				err = recog.training(5)
 				acc = recog.validate()
 				res = recog.recognize(features[0][0])
 				rec = CustomRecognition.convertToMotion(res)
 
+				# recog = CustomRecognition(len(features[0][0]),*elementANN,reusedDataSet=ds)
+				# err2 = recog._trainer.trainUntilConvergence()	# NEVER END FUNCTION (Waitng More than 7 Hours)
+				# acc2 = recog.validate()
+				# res2 = recog.recognize(features[0][0])
+				# rec2 = CustomRecognition.convertToMotion(res)
+
 				try :
 					text = "\t".join(
-						['>'*10,network.__name__,inlayer.__name__,hidlayer1.__name__,hidlayer2.__name__,outlayer.__name__] + 
+						['FXEP',network.__name__,inlayer.__name__,hidlayer1.__name__,hidlayer2.__name__,outlayer.__name__] + 
 						["%.3f"%acc,"%d"%rec,] + map(lambda x: "%.3f"%x,res) + map(lambda x: "%.3f"%x,err))
 					afile.write(text + "\n")
+					# text = "\t".join(
+					# 	['CVGN',network.__name__,inlayer.__name__,hidlayer1.__name__,hidlayer2.__name__,outlayer.__name__] + 
+					# 	["%.3f"%acc2,"%d"%rec2,] + map(lambda x: "%.3f"%x,res2) + map(lambda x: "%.3f"%x,err2))
+					# afile.write(text + "\n")
 					print ">> SUCCESS"
 				except :
 					print traceback.print_exc()
 					break
 			except :
-				continue
+ 				continue
 
 		print "FINISHED"
 
 		afile.close()
+		self.exitSignal.emit()
 		exit()
 
-from PyQt4 import QtGui
-import sys,threading
-
 class MainWindow(QtGui.QMainWindow):
-	def __init__(self):
+	def __init__(self,work):
 		QtGui.QMainWindow.__init__(self)
 		self.setWindowTitle("AUTOMATION")
+		work.exitSignal.connect(sys.exit)
 
 if __name__ == '__main__':
 	app = QtGui.QApplication(sys.argv)
 	work = Automation()
-	gui = MainWindow()
+	gui = MainWindow(work)
 	# t = threading.Thread(target=work.compare_fft)
 	t = threading.Thread(target=work.compare_ann)
 

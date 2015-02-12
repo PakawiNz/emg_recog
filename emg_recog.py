@@ -4,14 +4,14 @@ from pybrain.datasets import SupervisedDataSet
 from pybrain.supervised.trainers import BackpropTrainer,RPropMinusTrainer
 import time
 
-OUTPUTSIZE = 6
+OUTPUTSIZE = 5
 
 class Recognition(object):
 	"""docstring for Recognition"""
 	def __init__(self,freq_domain):
 		super(Recognition, self).__init__()
 		self._ds = SupervisedDataSet(freq_domain, OUTPUTSIZE)
-		self._net = buildNetwork(freq_domain, freq_domain*2, OUTPUTSIZE)
+		self._net = buildNetwork(freq_domain, OUTPUTSIZE+1, OUTPUTSIZE,bias=True)
 		self._trainer = BackpropTrainer(self._net, self._ds)
 
 	def addSample(self,features,activity):
@@ -48,13 +48,29 @@ class Recognition(object):
 	@staticmethod
 	def convertToActivation(x):
 		result = [0]*OUTPUTSIZE
-		result[int(x)] = 1
+		result[int(x)-1] = 1
 		return result
 
 	@staticmethod
 	def convertToMotion(alist):
 		idx = max(range(len(alist)), key=lambda i: alist[i])
 		return idx
+
+	def printStructure(self):
+		for mod in self._net.modules:
+		  print "Module:", mod.name
+		  if mod.paramdim > 0:
+		    print "--parameters:", mod.params
+		  for conn in self._net.connections[mod]:
+		    print "-connection to", conn.outmod.name
+		    if conn.paramdim > 0:
+		       print "- parameters", conn.params
+		  if hasattr(self._net, "recurrentConns"):
+		    print "Recurrent connections"
+		    for conn in self._net.recurrentConns:             
+		       print "-", conn.inmod.name, " to", conn.outmod.name
+		       if conn.paramdim > 0:
+		          print "- parameters", conn.params
 
 def optimalHiddenSize(input_size,output_size,hidden_layer):
 	diff = float(input_size - output_size)/(hidden_layer + 1)
@@ -68,7 +84,7 @@ class CustomRecognition(Recognition):
 		if type(HiddenLayer) not in (list,tuple) :
 			HiddenLayer = [HiddenLayer]
 		if type(HiddenConnection) not in (list,tuple) :
-			HiddenConnection = [HiddenConnection]*len(HiddenLayer)
+			HiddenConnection = [HiddenConnection]*(len(HiddenLayer)-1)
 		if len(HiddenConnection) != len(HiddenLayer)-1 :
 			raise Exception(">"*10 + "HIDDEN LAYER AND CONNECTION SIZE MISSMATCH")
 
@@ -96,21 +112,65 @@ class CustomRecognition(Recognition):
 		self._net = net
 		self._trainer = trainer
 
-# if __name__ == '__main__':
-# 	test = [([1,2,3],1),
-# 			([2,2,3],2),
-# 			([3,2,3],3),
-# 			([4,2,3],4),
-# 			([5,2,3],5),]
+from pybrain.datasets.classification import ClassificationDataSet
+from pybrain.optimization.populationbased.ga import GA as Optimizer
+from pybrain.tools.shortcuts import buildNetwork
 
-# 	for i in range(10):
-# 		network,inlayer,hidlayer,outlayer = (STRUCT.FeedForwardNetwork,STRUCT.LinearLayer,STRUCT.MultiplicationLayer,STRUCT.SoftmaxLayer)
-# 		recog = CustomRecognition(3,inlayer, STRUCT.FullConnection, outlayer, STRUCT.FullConnection, hidlayer, 0, network, BackpropTrainer)
-# 		map(lambda x : recog.addSample(*x),test)
-# 		err = recog.training(10)
-# 		acc = recog.validate()
-# 		res = recog.recognize(test[0][0])
-# 		rec = Recognition.convertToMotion(res)
 
-# 		text = "\t".join(['>'*10,"%.3f"%err,"%.3f"%acc,"%d"%rec,] + map(lambda x: "%.3f"%x,res))
-# 		print text
+class SelfLearningRecognition(Recognition):
+	"""docstring for SelfLearningRecognition"""
+	def __init__(self,features):
+		super(SelfLearningRecognition, self).__init__(len(features[0][0]))
+
+		self._ds = ClassificationDataSet(8,OUTPUTSIZE)
+		map (lambda x : self.addSample(*x), features)
+
+		self._ds.setField('class', map(Recognition.convertToActivation,range(OUTPUTSIZE)))
+		self._net = buildNetwork(len(features[0][0]),7,6,OUTPUTSIZE)
+		self._optm = Optimizer(self._ds.evaluateModuleMSE, self._net, minimize=True)
+
+		print "start learn"
+		self._optm.learn()
+		print "finish learn"
+		
+def printX(*x):
+	print x
+
+if __name__ == '__main__':
+	import itertools
+	test = list(itertools.product(range(1,6),range(6),range(5),range(4),range(3),range(2),range(1),range(1)))
+	test = map(lambda x: (x,x[0]), test)
+	# print "\n".join(map(str,test))
+	print len(test)
+
+	recog = Recognition(len(test[0][0]))
+	map(lambda x : recog.addSample(*x),test)
+	recog._trainer = BackpropTrainer(recog._net, recog._ds, 
+		learningrate=0.3, lrdecay=1.0, momentum=0.2, verbose=False, batchlearning=False, weightdecay=0.0)
+	err = recog.training(500,printX)
+	print recog.validate()
+	# recog.printStructure()
+
+	for i in test :
+		print map(lambda x: "%.3f"%x,recog.recognize(i[0])), Recognition.convertToMotion(recog.recognize(i[0])), 
+		print " >>> " , Recognition.convertToActivation(i[1]), i[1]
+
+	# for i in range(1):
+		# network,inlayer,hidlayer,outlayer = (STRUCT.FeedForwardNetwork,STRUCT.LinearLayer,STRUCT.MultiplicationLayer,STRUCT.SoftmaxLayer)
+		# recog = CustomRecognition(3,inlayer, STRUCT.FullConnection, outlayer, STRUCT.FullConnection, hidlayer, 0, network, BackpropTrainer)
+		# map(lambda x : recog.addSample(*x),test)
+		# err = recog.training(10)
+		# print recog._trainer.trainUntilConvergence()
+
+		# recog = SelfLearningRecognition(test)
+		# acc = recog.validate()
+		# res = recog.recognize(test[0][0])
+		# rec = Recognition.convertToMotion(res)
+
+		# text = "\t".join(['>'*10,"%.3f"%acc,"%d"%rec,] + map(lambda x: "%.3f"%x,res)+ map(lambda x: "%.3f"%x,err))
+		# print text
+
+		# for sample in test :
+		# 	print recog.recognize(sample[0])
+
+

@@ -1,8 +1,6 @@
 import serial,sys
 import os,glob
 
-# COMPORT = '/dev/tty.usbmodemfa131'
-COMPORT = '/dev/tty.usbmodemfd121'
 BAUDRATE = 57600
 
 PACKETLEN = 17

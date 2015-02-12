@@ -21,7 +21,7 @@ class WorkingThread(QtCore.QObject):
 		lastActivity = 0
 
 		count = 0
-		mem = open(datetime.datetime.now().strftime("recog %y%m%d.txt"),'a+')
+		mem = open(datetime.datetime.now().strftime("result/recog %y%m%d.txt"),'a+')
 		while not self.terminate :
 			data = ser.recieve().ch1
 			self.updateRaw.emit(data)
@@ -108,11 +108,9 @@ class MainWindow(QtGui.QMainWindow):
 		self.plotArea.update(data_new)
 
 	def btnTrain_slave(self):
-		self.btnPlay.setDisabled(True)
 		self.btnTrain.setDisabled(True)
 		self.btnTerminate.setDisabled(False)
 		self.slave.train(0)
-		self.btnPlay.setDisabled(False)
 		self.btnTrain.setDisabled(False)
 		self.btnTerminate.setDisabled(True)
 
