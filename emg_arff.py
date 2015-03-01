@@ -1,8 +1,9 @@
 from emg_automation import feature_extr,get_rawdata
-from emg_ann import autoWEKA
+from emg_autoweka import autoWEKA
 
 def rawpick(pick,ctype,filename): # pick = constance of each number of record each type 
-	arff = open('2arff/%s-%d.arff'%(filename,ctype),"a+")
+	outfile = '2arff/%s-%d.arff'%(filename,ctype)
+	arff = open(outfile,"w")
 	# head
 	arff.write("@relation '%s'\n"%(filename))
 	for x in xrange(1,9):
@@ -25,11 +26,11 @@ def rawpick(pick,ctype,filename): # pick = constance of each number of record ea
 		print store
 		print pick
 		lines = open(store,'r').readlines()
-		for p in xrange(0,pick):
+		for p in xrange(0,min(pick,len(lines))):
 			arff.write(lines[p])
 	arff.close()
 
-	return 1
+	return outfile
 
 
 def rawtoarff(ctype,filename): #type : 0=one variable, 1=one hot
@@ -37,7 +38,8 @@ def rawtoarff(ctype,filename): #type : 0=one variable, 1=one hot
 	rawdata = get_rawdata('0raw/'+filename+'.txt')
 	features = feature_extr(elementFFT, rawdata, False)
 
-	store = open('1store/%s-%d.csv'%(filename,ctype),"a+")
+	outfile = '1store/%s-%d.csv'%(filename,ctype)
+	store = open(outfile,"w")
 
 	for fs,o in features :
 		for f in fs :
@@ -55,8 +57,7 @@ def rawtoarff(ctype,filename): #type : 0=one variable, 1=one hot
 				elif x != o and x != 5 :
 					store.write("0,")
 	store.close()
-
-
+	return features
 
 if __name__ == '__main__':
 	import glob

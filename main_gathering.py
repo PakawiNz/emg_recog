@@ -21,7 +21,7 @@ class WorkingThread(QtCore.QObject):
 		lastActivity = 0
 
 		count = 0
-		mem = open(datetime.datetime.now().strftime("result/recog %y%m%d.txt"),'a+')
+		mem = open(datetime.datetime.now().strftime("0raw/recog %y%m%d.txt"),'a+')
 		while not self.terminate :
 			data = ser.recieve().ch1
 			self.updateRaw.emit(data)
