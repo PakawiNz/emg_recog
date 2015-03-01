@@ -24,14 +24,14 @@ N_FOLD 	= [10]
 EPOCH 	= [500] 
 MOMENTUM 	= [0.05,0.1,0.2,0.3,0.4,0.5]
 LEARNING_RATE = [0.05,0.1,0.2,0.3,0.4,0.5]
-HIDDEN0 	= []<<<<<<<<<<<<<<<<form Exp1
-HIDDEN1 	= []<<<<<<<<<<<<<<<<form Exp1
+HIDDEN0 	= [] #<<<<<<<<<<<<<<<<form Exp1
+HIDDEN1 	= [] #<<<<<<<<<<<<<<<<form Exp1
 
 #Ex3 vary EPOCH
 # N_FOLD 	= [10,20,50,100] 
 # EPOCH 	= [500,1000,2000,5000,800,10000]
-# MOMENTUM 	= []<<<<<<<<<<<<<<<<form Exp2
-# LEARNING_RATE = []<<<<<<<<<<<<<<<<form Exp2
+# MOMENTUM 	= [] #<<<<<<<<<<<<<<<<form Exp2
+# LEARNING_RATE = [] #<<<<<<<<<<<<<<<<form Exp2
 # HIDDEN0 	= []
 # HIDDEN1 	= []
 

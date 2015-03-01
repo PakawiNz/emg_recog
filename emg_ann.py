@@ -1,66 +1,6 @@
 import numpy as np
-import re
-import os
+import re, os
 import datetime
-
-LEARNING_RATE = 0.3
-MOMENTUM = 0.2
-EPOCH = 500
-N_FOLD = 10
-NUMR_NORM = False
-ATTR_NORM = True
-
-WEKA_PATH = '-classpath "C:\Program Files\Weka-3-6\weka.jar"'
-WEKA_CLASS = 'weka.classifiers.functions.MultilayerPerceptron'
-WEKA_OPTION = ' -L %.2f -M %.2f -N %d -x %d -V 0 -S 0 -E 20 -H a -B -v %s %s'%(
-		LEARNING_RATE,MOMENTUM,EPOCH,N_FOLD,
-		'-C' if not NUMR_NORM else '',
-		'-I' if not ATTR_NORM else '')
-
-def readWEKA(filename):
-	
-	print "START WEKA"
-	start = datetime.datetime.now()
-	WEKA_CMD = " ".join(["java",WEKA_PATH,WEKA_CLASS,WEKA_OPTION,"-t",filename])
-	print WEKA_CMD
-	result = os.popen(WEKA_CMD).read()
-	lines = result.splitlines()
-	accu = re.search(r'Correctly Classified Instances\s+(\d+)\s+([\d.]+).*', result)
-	print "FINISH WEKA with Accuracy %s%% take %s"%(accu.group(2),datetime.datetime.now() - start)
-
-	weights = [
-		map(lambda x:[W0,1],range(8)),
-		map(lambda x:[],range(6)),
-		map(lambda x:[],range(5)),
-	]
-	node_sorted = weights[2] + weights[1]
-	node_idx = 0
-	getting_attr = False
-	for line in lines:
-		if getting_attr :
-			if re.match(r'\s{2,}', line):
-				try :
-					res = re.search(r'[\w\-\.]+$', line)
-					res = float(res.group(0))
-					node_sorted[node_idx].append(res)
-				except :
-					pass
-			else :
-				node_idx += 1
-
-		if re.match(r'Sigmoid Node',line ):
-			getting_attr = True
-
-		if node_idx == len(node_sorted) :
-			break
-
-	return weights
-
-OUTPUTSIZE = 5
-def convertToActivation(x):
-	result = [0]*OUTPUTSIZE
-	result[int(x)-1] = 1
-	return result
 
 def convertToMotion(alist):
 	idx = max(range(len(alist)), key=lambda i: alist[i])
@@ -73,6 +13,9 @@ def mul(x,y=1):
 	return x * y
 
 class Node(object):
+
+	X0 = 1 # default bias value
+
 	def __init__(self,input_size,actfunc,init_weight=0):
 		super(Node, self).__init__()
 
@@ -85,7 +28,7 @@ class Node(object):
 		if len(data) != len(self.weights)-1:
 			raise Exception("node_input_size and data_size missmatch")
 
-		sum_result = reduce(add,map(lambda x:mul(*x),zip([X0]+data,self.weights)))
+		sum_result = reduce(add,map(lambda x:mul(*x),zip([Node.X0]+data,self.weights)))
 		return self.actfunc(sum_result)
 
 	def setWeight(self,weights):
@@ -145,27 +88,93 @@ class Network(object):
 		map(lambda x: x[0].setWeight(x[1]), zip(self.hiddenNodes,weights[1]))
 		map(lambda x: x[0].setWeight(x[1]), zip(self.outputNodes,weights[2]))
 
-	recognize = activate
+class WekaTrainer(object):
+
+	W0 = 0 # initial bias weight
+
+	def __init__(self,
+		LEARNING_RATE = 0.3,
+		MOMENTUM = 0.2,
+		EPOCH = 500,
+		N_FOLD = 10,
+		NUMR_NORM = False,
+		ATTR_NORM = True,
+		):
+
+		self.WEKA_PATH = '-classpath "C:\Program Files\Weka-3-6\weka.jar"'
+		self.WEKA_CLASS = 'weka.classifiers.functions.MultilayerPerceptron'
+		self.WEKA_OPTION = ' -L %.2f -M %.2f -N %d -x %d -V 0 -S 0 -E 20 -H a -B -v %s %s'%(
+				LEARNING_RATE,MOMENTUM,EPOCH,N_FOLD,
+				'-C' if not NUMR_NORM else '',
+				'-I' if not ATTR_NORM else '')
+
+	def train(self,filename):
+		print "START WEKA"
+		start = datetime.datetime.now()
+		WEKA_CMD = " ".join(["java",self.WEKA_PATH,self.WEKA_CLASS,self.WEKA_OPTION,"-t",filename])
+		print WEKA_CMD
+		result = os.popen(WEKA_CMD).read()
+		lines = result.splitlines()
+		# print result
+		accu = re.search(r'Correctly Classified Instances\s+(\d+)\s+([\d.]+).*', result)
+		print "FINISH WEKA with Accuracy %s%% take %s"%(accu.group(2))
+		print "FINISH WEKA take time %s"%(datetime.datetime.now() - start)
+
+		weights = [
+			map(lambda x:[WekaTrainer.W0,1],range(8)),
+			map(lambda x:[],range(6)),
+			map(lambda x:[],range(5)),
+		]
+		node_sorted = weights[2] + weights[1]
+		node_idx = 0
+		getting_attr = False
+		for line in lines:
+			if getting_attr :
+				if re.match(r'\s{2,}', line):
+					try :
+						res = re.search(r'[\w\-\.]+$', line)
+						res = float(res.group(0))
+						node_sorted[node_idx].append(res)
+					except :
+						pass
+				else :
+					node_idx += 1
+
+			if re.match(r'Sigmoid Node',line ):
+				getting_attr = True
+
+			if node_idx == len(node_sorted) :
+				break
+
+		return weights
+
 
 strFloatList = lambda z : "[%s]"%", ".join(map(lambda x :"%.03f"%x,z))
 
 if __name__ == '__main__':
-	import itertools
+	# import itertools
+	# test = list(itertools.product(range(1,6),range(6),range(5),range(4),range(3),range(2),range(1),range(1)))
+	# arfffile = 'result/stupid.arff'
+	# supervised = map(lambda x: (x,x[0]), test)
 
-	weights = readWEKA("result/recog 150216.arff")
-	test = list(itertools.product(range(1,6),range(6),range(5),range(4),range(3),range(2),range(1),range(1)))
-	supervised = map(lambda x: (x,x[0]), test)
+	from emg_arff import rawtoarff,rawpick
+	supervised = rawtoarff(0, "150206")
+	arfffile = rawpick(5000, 0, "150206")
+	test = zip(*supervised)[0]
 
+	trainner = WekaTrainer()
+	weights = trainner.train(arfffile)
 	recog = Network(8, 6, 5, normalize=test)
 	recog.setWeight(weights)
 
 	count = 0
 	for i in supervised:
-		after_input,after_hidden,after_output = recog.recognize(map(lambda x: x ,i[0]),verbose=True)
-		print strFloatList(after_input),strFloatList(after_hidden),strFloatList(after_output),
+		after_input,after_hidden,after_output = recog.activate(map(lambda x: x ,i[0]),verbose=True)
+		# print strFloatList(after_input),strFloatList(after_hidden),strFloatList(after_output),
+		# print strFloatList(after_output),
 
 		result = after_output
-		print convertToMotion(result) + 1, i[1]
+		# print convertToMotion(result) + 1, i[1]
 		if convertToMotion(result) + 1 == i[1] : 
 			count += 1
 
