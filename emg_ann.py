@@ -10,20 +10,20 @@ import itertools
 # HIDDEN1 	= [0]
 
 #Exp1 vary HIDDEN0, HIDDEN1 >>> test 1 or 2 Layer
-# N_FOLD 	= [10]
-# EPOCH 	= [500] 
-# MOMENTUM 	= [0.1]
-# LEARNING_RATE = [0.1]
-# HIDDEN0 	= [8,7,6,5]
+N_FOLD 	= [10]
+EPOCH 	= [500] 
+MOMENTUM 	= [0.1]
+LEARNING_RATE = [0.1]
+HIDDEN0 	= [9,8,7,6,5,4,3,2,1]
 # HIDDEN1 	= [7,6,5]
 
 #Exp2 vary learning rate & momentum & hidden0
-N_FOLD 	= [10]
-EPOCH 	= [500] 
-MOMENTUM 	= [0.05,0.1,0.2,0.3,0.4,0.5]
-LEARNING_RATE = [0.05,0.1,0.2,0.3,0.4,0.5]
-HIDDEN0 	= []<<<<<<<<<<<<<<<<form Exp1
-HIDDEN1 	= []<<<<<<<<<<<<<<<<form Exp1
+# N_FOLD 	= [10]
+# EPOCH 	= [500] 
+# MOMENTUM 	= [0.05,0.1,0.2,0.3,0.4,0.5]
+# LEARNING_RATE = [0.05,0.1,0.2,0.3,0.4,0.5]
+# HIDDEN0 	= []<<<<<<<<<<<<<<<<form Exp1
+# HIDDEN1 	= []<<<<<<<<<<<<<<<<form Exp1
 
 #Ex3 vary EPOCH
 # N_FOLD 	= [10,20,50,100] 
@@ -86,11 +86,9 @@ def autoWEKA(exp,filename):
 		for i,word in enumerate(lines):
 			data[i%9].append(word)
 
-
-
-		# csvdata = ",".join(map(str,list(var)+[datetime.datetime.now() - start]+[ACCU.group(2)]+[MAE.group(1)]+[RMSE.group(1)]+[RAE.group(1)]+[RRSE.group(1)]+data[2:5]+[WEKA_CMD]))
-		csvdata = ",".join(map(str,list(var)+[]+[datetime.datetime.now() - start]+[ACCU.group(2)]+[MAE.group(1)]+[RMSE.group(1)]+[RAE.group(1)]+[RRSE.group(1)]+data[2:5]+[WEKA_CMD]))
-		afile.write(csvdata)
+		# csvdata = ",".join(map(str,list(var)+[datetime.datetime.now() - start]+[ACCU.group(2)]+[]+[MAE.group(1)]+[RMSE.group(1)]+[RAE.group(1)]+[RRSE.group(1)]+[data[2]]+[data[3]]+[data[4]]+[WEKA_OPTION]))
+		csvdata = ",".join(map(str,list(var)+[]+[datetime.datetime.now() - start]+[ACCU.group(2)]+[]+[MAE.group(1)]+[RMSE.group(1)]+[RAE.group(1)]+[RRSE.group(1)]+[data[2]]+[data[3]]+[data[4]]+[WEKA_OPTION]))
+		afile.write(csvdata+'\n')
 	
 	afile.close()
 	return 1

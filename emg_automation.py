@@ -1,8 +1,8 @@
 from emg_fft import FeatureExtractor
 from emg_recog import CustomRecognition
 
-from pybrain import structure as STRUCT
-from pybrain.supervised import BackpropTrainer, RPropMinusTrainer
+# from pybrain import structure as STRUCT
+# from pybrain.supervised import BackpropTrainer, RPropMinusTrainer
 import itertools,re
 import time
 import traceback
@@ -21,20 +21,20 @@ TREND_CHUNK1 = [0]
 OUTPUT_TYPE2 = [2]
 TREND_CHUNK2 = [3,5,7,9,11,13,15,17,19,21]
 
-NN_LAYER = map(STRUCT.__getattribute__,filter(lambda x: x.endswith('Layer'),dir(STRUCT)))
-NN_CONNECTION = map(STRUCT.__getattribute__,filter(lambda x: x.endswith('Connection'),dir(STRUCT)))
-NN_NETWORK = map(STRUCT.__getattribute__,filter(lambda x: x.endswith('Network'),dir(STRUCT)))
-NN_TRAINER =[BackpropTrainer,RPropMinusTrainer]
-NN_HIDDEN = [8,12,16,64,128]
+# NN_LAYER = map(STRUCT.__getattribute__,filter(lambda x: x.endswith('Layer'),dir(STRUCT)))
+# NN_CONNECTION = map(STRUCT.__getattribute__,filter(lambda x: x.endswith('Connection'),dir(STRUCT)))
+# NN_NETWORK = map(STRUCT.__getattribute__,filter(lambda x: x.endswith('Network'),dir(STRUCT)))
+# NN_TRAINER =[BackpropTrainer,RPropMinusTrainer]
+# NN_HIDDEN = [8,12,16,64,128]
 
 AUTOMATION1 = [OUTPUT_TYPE1,CALC_SIZE,SLIDING_SIZE,FREQ_DOMAIN,TREND_CHUNK1]
 AUTOMATION2 = [OUTPUT_TYPE2,CALC_SIZE,SLIDING_SIZE,FREQ_DOMAIN,TREND_CHUNK2]
 
 # AUTOMATION0 = [NN_LAYER,NN_CONNECTION,NN_LAYER,NN_CONNECTION,NN_LAYER,NN_HIDDEN,NN_NETWORK,NN_TRAINER]
-AUTOMATION0 = [	[STRUCT.LinearLayer],NN_CONNECTION,
-				[STRUCT.LinearLayer],NN_CONNECTION,
-				[STRUCT.SigmoidLayer],[0],
-				NN_NETWORK,NN_TRAINER]
+# AUTOMATION0 = [	[STRUCT.LinearLayer],NN_CONNECTION,
+# 				[STRUCT.LinearLayer],NN_CONNECTION,
+# 				[STRUCT.SigmoidLayer],[0],
+# 				NN_NETWORK,NN_TRAINER]
 
 current_milli_time = lambda: int(round(time.time() * 1000))
 
@@ -91,11 +91,11 @@ class Automation(QtCore.QObject) :
 		self.terminate = False
 
 	def compare_fft(self) :
-		elementANN = (
-			STRUCT.LinearLayer,STRUCT.FullConnection,
-			STRUCT.SoftmaxLayer,STRUCT.FullConnection,
-			STRUCT.SigmoidLayer,STRUCT.FullConnection,
-			STRUCT.FeedForwardNetwork,BackpropTrainer)
+		# elementANN = (
+			# STRUCT.LinearLayer,STRUCT.FullConnection,
+			# STRUCT.SoftmaxLayer,STRUCT.FullConnection,
+			# STRUCT.SigmoidLayer,STRUCT.FullConnection,
+			# STRUCT.FeedForwardNetwork,BackpropTrainer)
 
 		rawdata = get_rawdata('result/recog 150206.txt')
 
@@ -114,7 +114,7 @@ class Automation(QtCore.QObject) :
 
 				features,t_fill,t_calc = feature_extr(elementFFT,rawdata)
 
-				recog = CustomRecognition(elementFFT[3],*elementANN)
+				# recog = CustomRecognition(elementFFT[3],*elementANN)
 				map(lambda x : recog.addSample(*x),features)
 
 				err = recog.training(20)
@@ -138,7 +138,7 @@ class Automation(QtCore.QObject) :
 		exit()
 
 
-	def compare_ann(self,feature=None):
+	# def compare_ann(self,feature=None):
 		elementFFT = [0,128,4,8,0]
 		rawdata = get_rawdata('result/recog 150206.txt')
 		if not feature :
@@ -147,12 +147,12 @@ class Automation(QtCore.QObject) :
 		from temp2 import doublelayer_top_ten as elements
 		cartesian = elements*100
 		# cartesian = list(itertools.product([STRUCT.FeedForwardNetwork],NN_LAYER,NN_LAYER,NN_LAYER,NN_LAYER))
-		print "ann variation = %d"%len(cartesian)
+		# print "ann variation = %d"%len(cartesian)
 
 		ds = CustomRecognition.buildTrianingSet(features)
 
 		count = 0
-		afile = open('result/compare_ann.txt','a+')
+		# afile = open('result/compare_ann.txt','a+')
 		for network,inlayer,hidlayer1,hidlayer2,outlayer in cartesian[count:] :
 			text = "\t".join([str(count),'>'*10,network.__name__,inlayer.__name__,hidlayer1.__name__,hidlayer2.__name__,outlayer.__name__])
 			print text
@@ -161,19 +161,19 @@ class Automation(QtCore.QObject) :
 				if self.terminate :
 					break
 
-				elementANN = (
-					inlayer, STRUCT.FullConnection, 
-					outlayer, STRUCT.FullConnection, 
-					[hidlayer1,hidlayer2], STRUCT.FullConnection, 
+				# elementANN = (
+					# inlayer, STRUCT.FullConnection, 
+					# outlayer, STRUCT.FullConnection, 
+					# [hidlayer1,hidlayer2], STRUCT.FullConnection, 
 					network, BackpropTrainer)
 
-				recog = CustomRecognition(len(features[0][0]),*elementANN,reusedDataSet=ds)
+				# recog = CustomRecognition(len(features[0][0]),*elementANN,reusedDataSet=ds)
 				err = recog.training(5)
 				acc = recog.validate()
 				res = recog.recognize(features[0][0])
 				rec = CustomRecognition.convertToMotion(res)
 
-				# recog = CustomRecognition(len(features[0][0]),*elementANN,reusedDataSet=ds)
+				recog = CustomRecognition(len(features[0][0]),*elementANN,reusedDataSet=ds)
 				# err2 = recog._trainer.trainUntilConvergence()	# NEVER END FUNCTION (Waitng More than 7 Hours)
 				# acc2 = recog.validate()
 				# res2 = recog.recognize(features[0][0])
@@ -205,14 +205,14 @@ class MainWindow(QtGui.QMainWindow):
 	def __init__(self,work):
 		QtGui.QMainWindow.__init__(self)
 		self.setWindowTitle("AUTOMATION")
-		work.exitSignal.connect(sys.exit)
+		# work.exitSignal.connect(sys.exit)
 
 if __name__ == '__main__':
 	app = QtGui.QApplication(sys.argv)
 	work = Automation()
 	gui = MainWindow(work)
 	# t = threading.Thread(target=work.compare_fft)
-	t = threading.Thread(target=work.compare_ann)
+	# t = threading.Thread(target=work.compare_ann)
 
 	t.start()
 	gui.show()
