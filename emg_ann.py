@@ -4,11 +4,15 @@ LEARNING_RATE = 0.3
 MOMENTUM = 0.2
 EPOCH = 500
 N_FOLD = 10
+NUMR_NORM = False
+ATTR_NORM = True
 
 WEKA_PATH = '-classpath "C:\Program Files\Weka-3-6\weka.jar"'
 WEKA_CLASS = 'weka.classifiers.functions.MultilayerPerceptron'
-WEKA_OPTION = ' -L %.2f -M %.2f -N %d -V 0 -S 0 -E 20 -H a -B -C -v -I -x %d'%(
-		LEARNING_RATE,MOMENTUM,EPOCH,N_FOLD)
+WEKA_OPTION = ' -L %.2f -M %.2f -N %d -x %d -V 0 -S 0 -E 20 -H a -B -v %s %s'%(
+		LEARNING_RATE,MOMENTUM,EPOCH,N_FOLD,
+		'-C' if not NUMR_NORM else '',
+		'-I' if not ATTR_NORM else '')
 
 W0 = 0
 X0 = 1
@@ -96,6 +100,7 @@ class Node(object):
 		self.weights = weights
 		return
 
+normalizefn = lambda r,b : (lambda x: float(x - b)/r) if r != 0 else (lambda x: float(x - b))
 linearfn = lambda x: x
 sigmoidfn = lambda x: 1/(1+np.exp(-x))
 
@@ -104,10 +109,23 @@ class Network(object):
 	def __init__(self,input_size,hidden_size,output_size,
 			input_function = linearfn,
 			hidden_function = sigmoidfn,
-			output_function = sigmoidfn):
+			output_function = sigmoidfn,
+			normalize = False):
 		super(Network, self).__init__()
 
-		self.inputNodes = 	map(lambda x: Node(1,input_function), range(input_size))
+		if normalize :
+			sample = zip(*normalize)
+			if len(sample) != input_size :
+				raise Exception("input_size and sample_size missmatch")
+			minarray = map(np.min, sample)
+			maxarray = map(np.max, sample)
+			rangearray = map(lambda x: float(x[0] - x[1])/2 , zip(maxarray,minarray))
+			basearray = map(lambda x: float(x[0] + x[1])/2 , zip(maxarray,minarray))
+
+			self.inputNodes = map(lambda x: Node(1,normalizefn(*x)), zip(rangearray, basearray))
+		else :
+			self.inputNodes = map(lambda x: Node(1,input_function), range(input_size))
+
 		self.hiddenNodes = 	map(lambda x: Node(input_size,hidden_function), range(hidden_size))
 		self.outputNodes = 	map(lambda x: Node(hidden_size,output_function), range(output_size))
 
@@ -132,22 +150,27 @@ class Network(object):
 
 	recognize = activate
 
+strFloatList = lambda z : "[%s]"%", ".join(map(lambda x :"%.03f"%x,z))
+
 if __name__ == '__main__':
 	import itertools
 
 	weights = readWEKA("result/stupid.arff")
 	test = list(itertools.product(range(1,6),range(6),range(5),range(4),range(3),range(2),range(1),range(1)))
-	test = map(lambda x: (x,x[0]), test)
+	supervised = map(lambda x: (x,x[0]), test)
 
-	recog = Network(8, 6, 5)
+	recog = Network(8, 6, 5, normalize=test)
 	recog.setWeight(weights)
 
 	count = 0
-	for i in test:
-		result = recog.recognize(i[0])
-		# print result, convertToMotion(result) + 1, i[1]
+	for i in supervised:
+		after_input,after_hidden,after_output = recog.recognize(map(lambda x: x ,i[0]),verbose=True)
+		print strFloatList(after_input),strFloatList(after_hidden),strFloatList(after_output),
+
+		result = after_output
+		print convertToMotion(result) + 1, i[1]
 		if convertToMotion(result) + 1 == i[1] : 
 			count += 1
 
 	# print "\n".join(map(str ,recog.recognize(test[0][0],True)))
-	print count*100.0/len(test)
+	print '%0.01f%%'%(count*100.0/len(supervised))
