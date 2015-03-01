@@ -1,4 +1,7 @@
 import numpy as np
+import re
+import os
+import datetime
 
 LEARNING_RATE = 0.3
 MOMENTUM = 0.2
@@ -14,13 +17,7 @@ WEKA_OPTION = ' -L %.2f -M %.2f -N %d -x %d -V 0 -S 0 -E 20 -H a -B -v %s %s'%(
 		'-C' if not NUMR_NORM else '',
 		'-I' if not ATTR_NORM else '')
 
-W0 = 0
-X0 = 1
-
 def readWEKA(filename):
-	import re
-	import os
-	import datetime
 	
 	print "START WEKA"
 	start = datetime.datetime.now()
@@ -155,7 +152,7 @@ strFloatList = lambda z : "[%s]"%", ".join(map(lambda x :"%.03f"%x,z))
 if __name__ == '__main__':
 	import itertools
 
-	weights = readWEKA("result/stupid.arff")
+	weights = readWEKA("result/recog 150216.arff")
 	test = list(itertools.product(range(1,6),range(6),range(5),range(4),range(3),range(2),range(1),range(1)))
 	supervised = map(lambda x: (x,x[0]), test)
 
@@ -172,5 +169,4 @@ if __name__ == '__main__':
 		if convertToMotion(result) + 1 == i[1] : 
 			count += 1
 
-	# print "\n".join(map(str ,recog.recognize(test[0][0],True)))
 	print '%0.01f%%'%(count*100.0/len(supervised))
