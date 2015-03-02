@@ -18,7 +18,7 @@ def getPath_train(filename):
 def storepick_arff(pick,ctype,filename): # pick = constance of each number of record each type 
 	# gather csv
 	data = []
-	stores = glob.glob('1store/*.csv')
+	stores = glob.glob(getPath_csv(0,'*'))
 	for store in stores:
 		print store
 		print pick
