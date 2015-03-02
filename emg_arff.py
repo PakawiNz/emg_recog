@@ -1,6 +1,7 @@
 from emg_autoweka import autoWEKA
 from emg_fft import get_supervised_fd
 import re,time
+import glob
 
 def getPath_raw(filename):
 	return '0raw/%s.txt'%(filename)
@@ -12,13 +13,11 @@ def getPath_arff(ctype,filename):
 	return '2arff/%s-%d.arff'%(filename,ctype)
 
 def getPath_train(filename):
-	return '4train/%s.txt'%(filename)
+	return '4train/%s.emg'%(filename)
 
 def storepick_arff(pick,ctype,filename): # pick = constance of each number of record each type 
-	arfffile = getPath_arff(ctype, filename)
-	arff = open(arfffile,"w")
+	# gather csv
 	data = []
-	import glob
 	stores = glob.glob('1store/*.csv')
 	for store in stores:
 		print store
@@ -31,16 +30,23 @@ def storepick_arff(pick,ctype,filename): # pick = constance of each number of re
 		minfd = map(min,fd_seperate)
 		maxfd = map(max,fd_seperate)
 
-	# head
+	# write header
+	input_size = len(minfd)
+	output_size = 5
+
+	arfffile = getPath_arff(ctype, filename)
+	arff = open(arfffile,"w")
 	arff.write("%% min: %s \n"%(minfd))
 	arff.write("%% max: %s \n"%(maxfd))
+	arff.write("%% i/o: %s \n"%([input_size,output_size]))
 	
 	arff.write("@relation '%s'\n"%(filename))
-	for x in xrange(1,9):
+	for x in xrange(1,input_size+1):
 		arff.write("@attribute FD%d numeric\n"%x)
 
 	if ctype == 0 :
-		arff.write("@attribute State {1,2,3,4,5}\n\n")
+		arff.write("@attribute State {%s}\n\n"%(
+			",".join(map(str,range(1,output_size+1))))) # {1,2,3,4,5}
 	else :
 		arff.write("@attribute Rest {0,1}\n")
 		arff.write("@attribute Flex {0,1}\n")
@@ -48,16 +54,13 @@ def storepick_arff(pick,ctype,filename): # pick = constance of each number of re
 		arff.write("@attribute Cir_Right {0,1}\n")
 		arff.write("@attribute Cir_Left {0,1}\n\n")
 	
-	# data
+	# write data
 	arff.write("@data\n")
 
 	for line in data:
-		arff.write('%s\n'%line)
-
+		arff.write('%s'%line)
 
 	arff.close()
-
-	return arfffile
 
 def fd_store(ctype,filename): #type : 0=one variable, 1=one hot
 	elementFFT = [0,128,4,8,0]

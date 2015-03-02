@@ -1,16 +1,10 @@
+from emg_arff import getPath_arff,getPath_train,fd_store,storepick_arff
 import numpy as np
 import re, os
 import datetime
 
-def convertToMotion(alist):
-	idx = max(range(len(alist)), key=lambda i: alist[i])
-	return idx
-
-def add(x,y=0):
-	return x + y
-
-def mul(x,y=1):
-	return x * y
+add = lambda x,y=0 : x+y
+mul = lambda x,y=1 : x*y
 
 class Node(object):
 
@@ -49,17 +43,16 @@ class Network(object):
 	def __init__(self,input_size,hidden_size,output_size,
 			input_function = linearfn,
 			hidden_function = sigmoidfn,
-			output_function = sigmoidfn,
-			normalize = False):
+			output_function = sigmoidfn,):
 		super(Network, self).__init__()
 
-		if normalize :
-			self.setMinMax(*self.calcMinMax(normalize))
-		else :
-			self.inputNodes = map(lambda x: Node(1,input_function), range(input_size))
-
+		self.inputNodes = map(lambda x: Node(1,input_function), range(input_size))
 		self.hiddenNodes = 	map(lambda x: Node(input_size,hidden_function), range(hidden_size))
 		self.outputNodes = 	map(lambda x: Node(hidden_size,output_function), range(output_size))
+
+	def convertToMotion(self,alist):
+		idx = max(range(len(alist)), key=lambda i: alist[i])
+		return idx
 
 	def activate(self,data,verbose=False):
 		if len(data) != len(self.inputNodes):
@@ -71,9 +64,9 @@ class Network(object):
 		after_output = map(lambda x: x.activate(after_hidden), self.outputNodes)
 
 		if verbose :
-			return after_input,after_hidden,after_output
+			return after_input,after_hidden,after_output,self.convertToMotion(after_output)
 		else :
-			return after_output
+			return self.convertToMotion(after_output)
 
 	def setWeight(self,weights):
 		map(lambda x: x[0].setWeight(x[1]), zip(self.inputNodes,weights[0]))
@@ -88,13 +81,7 @@ class Network(object):
 		basearray = map(lambda x: float(x[0] + x[1])/2 , zip(maxarray,minarray))
 		self.inputNodes = map(lambda x: Node(1,normalizefn(*x)), zip(rangearray, basearray))
 
-	def calcMinMax(self,sample):
-		sample = zip(*sample)
-		if len(sample) != input_size :
-			raise Exception("input_size and sample_size missmatch")
-		minarray = map(np.min, sample)
-		maxarray = map(np.max, sample)
-		return minarray,maxarray
+readarray = lambda x,fn : map(fn,re.search(r'\[([^\]]+)]', x).group(1).split(','))
 
 class WekaTrainer(object):
 
@@ -107,35 +94,59 @@ class WekaTrainer(object):
 		N_FOLD = 10,
 		NUMR_NORM = False,
 		ATTR_NORM = True,
+		HIDDEN1 = 'a',
+		HIDDEN2 = None,
 		):
 
+		self.trained = False
 		self.WEKA_PATH = '-classpath "C:\Program Files\Weka-3-6\weka.jar"'
 		self.WEKA_CLASS = 'weka.classifiers.functions.MultilayerPerceptron'
-		self.WEKA_OPTION = ' -L %.2f -M %.2f -N %d -x %d -V 0 -S 0 -E 20 -H a -B -v %s %s'%(
-				LEARNING_RATE,MOMENTUM,EPOCH,N_FOLD,
+		self.WEKA_OPTION = ' -L %.2f -M %.2f -N %d -x %d -V 0 -S 0 -E 20 -H %s%s -B -v %s %s'%(
+				LEARNING_RATE,MOMENTUM,EPOCH,N_FOLD,HIDDEN1,
+				',%s'%HIDDEN2 if HIDDEN2 else '',
 				'-C' if not NUMR_NORM else '',
-				'-I' if not ATTR_NORM else '')
+				'-I' if not ATTR_NORM else '',)
 
-	def train(self,filename):
+		self.hidden_size = []
+		for HIDDEN in (HIDDEN1,HIDDEN2):
+			if HIDDEN == 'a' :
+				self.hidden_size.append(lambda x,y : (x+y)/2)
+			elif HIDDEN == 'i' :
+				self.hidden_size.append(lambda x,y : x)
+			elif HIDDEN == 'o' :
+				self.hidden_size.append(lambda x,y : y)
+			elif HIDDEN == 't' :
+				self.hidden_size.append(lambda x,y : x+y)
+			elif type(HIDDEN) is int:
+				self.hidden_size.append(lambda x,y : HIDDEN)
+
+
+	def train(self,arfffile):
+		afile = open(getPath_arff(0,arfffile),'r')
+		self.minarray = readarray(afile.readline(),float)
+		self.maxarray = readarray(afile.readline(),float)
+		input_size,output_size = readarray(afile.readline(),int)
+		afile.close()
+
+		self.layerconfig = [input_size] + [fn(input_size,output_size) for fn in self.hidden_size] + [output_size]
+
+		weights = [map(lambda x:[WekaTrainer.W0,1],range(input_size))] +\
+			[map(lambda x:[],range(x)) for x in self.layerconfig[1:]]
+
 		print "START WEKA"
 		start = datetime.datetime.now()
-		WEKA_CMD = " ".join(["java",self.WEKA_PATH,self.WEKA_CLASS,self.WEKA_OPTION,"-t",filename])
+		WEKA_CMD = " ".join(["java",self.WEKA_PATH,self.WEKA_CLASS,self.WEKA_OPTION,"-t",getPath_arff(0,arfffile)])
 		print WEKA_CMD
 		result = os.popen(WEKA_CMD).read()
 		lines = result.splitlines()
 		# print result
 		accu = re.search(r'Correctly Classified Instances\s+(\d+)\s+([\d.]+).*', result)
-		print "FINISH WEKA with Accuracy %s%% take %s"%(accu.group(2))
+		print "FINISH WEKA with Accuracy %s%%"%(accu.group(2))
 		print "FINISH WEKA take time %s"%(datetime.datetime.now() - start)
 
-		weights = [
-			map(lambda x:[WekaTrainer.W0,1],range(8)),
-			map(lambda x:[],range(6)),
-			map(lambda x:[],range(5)),
-		]
-		node_sorted = weights[2] + weights[1]
 		node_idx = 0
 		getting_attr = False
+		node_sorted = weights[-1] + weights[-2] + (weights[-3] if len(weights) == 4 else [])
 		for line in lines:
 			if getting_attr :
 				if re.match(r'\s{2,}', line):
@@ -155,49 +166,61 @@ class WekaTrainer(object):
 				break
 
 		self.weights = weights
-		return weights
+		self.trained = True
 
-	def saveTrained(self):
-		pass
+	def loadTrained(self,filename):
+		afile = open(getPath_train(filename),'r')
+		self.minarray = readarray(afile.readline(),float)
+		self.maxarray = readarray(afile.readline(),float)
+		self.layerconfig = readarray(afile.readline(),int)
+		weights = []
+		for layer in self.layerconfig:
+			weight = []
+			for i in range(layer):
+				weight.append(readarray(afile.readline(),float))
+			weights.append(weight)
 
-	def loadTrained(self):
-		pass
+		self.weights = weights
+		self.trained = True
+		afile.close()
 
-class WekaNetwork(Network):
-	"""docstring for WekaNetwork"""
-	def __init__(self, weightfile):
-		super(WekaNetwork, self).__init__(8, 6, 5, normalize=test)
-		self.trainner = WekaTrainer()
-		self.setWeight(weights)
-		
+	def saveTrained(self,filename):
+		if not self.trained :
+			raise Exception("This trainer is not trained.")
+		afile = open(getPath_train(filename),'w')
+		afile.write("MIN %s\n"%self.minarray)
+		afile.write("MAX %s\n"%self.maxarray)
+		afile.write("CFG %s\n"%self.getLayerConfig())
 
-strFloatList = lambda z : "[%s]"%", ".join(map(lambda x :"%.03f"%x,z))
+		if len(self.weights) == 3 : layer_names = ['I','H','O']
+		if len(self.weights) == 4 : layer_names = ['I','Hi','Ho','O']
+		for layer,name in zip(self.weights,layer_names):
+			count = 1
+			for weight in layer:
+				afile.write("%s%d %s\n"%(name,count,weight))
+				count += 1
+
+		afile.close()
+
+	def getLayerConfig(self):
+		if not self.trained :
+			raise Exception("This trainer is not trained.")
+		return self.layerconfig
+
+	@staticmethod
+	def calcMinMax(sample):
+		sample = zip(*sample)
+		if len(sample) != input_size :
+			raise Exception("input_size and sample_size missmatch")
+		minarray = map(np.min, sample)
+		maxarray = map(np.max, sample)
+		return minarray,maxarray
 
 if __name__ == '__main__':
-	# import itertools
-	# test = list(itertools.product(range(1,6),range(6),range(5),range(4),range(3),range(2),range(1),range(1)))
-	# arfffile = 'result/stupid.arff'
-	# supervised = map(lambda x: (x,x[0]), test)
-
-	from emg_arff import rawtoarff,rawpick
-	supervised = rawtoarff(0, "150206")
-	arfffile = rawpick(5000, 0, "150206")
-	test = zip(*supervised)[0]
-
-	trainner = WekaTrainer()
-	weights = trainner.train(arfffile)
-	recog = Network(8, 6, 5, normalize=test)
-	recog.setWeight(weights)
-
-	count = 0
-	for i in supervised:
-		after_input,after_hidden,after_output = recog.activate(map(lambda x: x ,i[0]),verbose=True)
-		# print strFloatList(after_input),strFloatList(after_hidden),strFloatList(after_output),
-		# print strFloatList(after_output),
-
-		result = after_output
-		# print convertToMotion(result) + 1, i[1]
-		if convertToMotion(result) + 1 == i[1] : 
-			count += 1
-
-	print '%0.01f%%'%(count*100.0/len(supervised))
+	supervised = fd_store(0, "150206")
+	storepick_arff(5000, 0, "150206")
+	
+	trainer = WekaTrainer()
+	trainer.train("150206")
+	trainer.saveTrained("150206")
+	# trainer.loadTrained("150206")
