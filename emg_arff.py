@@ -1,5 +1,6 @@
-# from emg_automation import feature_extr,get_rawdata
 from emg_autoweka import autoWEKA
+from emg_fft import get_supervised_fd
+import re,time
 
 def getPath_raw(filename):
 	return '0raw/%s.txt'%(filename)
@@ -58,13 +59,12 @@ def storepick_arff(pick,ctype,filename): # pick = constance of each number of re
 
 	return arfffile
 
-
 def fd_store(ctype,filename): #type : 0=one variable, 1=one hot
 	elementFFT = [0,128,4,8,0]
-	rawdata = get_rawdata(getPath_raw(filename))
-	features = feature_extr(elementFFT, rawdata, False)
+	rawdata = get_supervised_td(getPath_raw(filename))
+	features = get_supervised_fd(elementFFT, rawdata, False)
 
-	outfile = getPath_csv(filename,ctype)
+	outfile = getPath_csv(ctype,filename)
 	store = open(outfile,"w")
 
 	for fs,o in features :
@@ -85,6 +85,22 @@ def fd_store(ctype,filename): #type : 0=one variable, 1=one hot
 	store.close()
 	return features
 
+def __tuplation(x):
+	try :
+		if ',' in x :
+			return tuple(map(float,x.split(',')))
+		else :
+			return float(x)
+	except :
+		return None
+
+def get_supervised_td(filename):
+	lines = open(filename,'r').readlines()
+	result = []
+	for line in lines :
+		line = re.split(r'\s+',line)
+		result += map(__tuplation,line)
+	return result
 
 if __name__ == '__main__':
 	import glob

@@ -1,6 +1,7 @@
 import numpy as np
 import threading
 import math
+import time
 
 UI_RANGE = 500
 DATA_RANGE = 1024
@@ -114,3 +115,31 @@ class FeatureExtractor(object) :
 		return np.sign(slope) * np.log10(np.abs(slope)) * UI_RANGE/5 + UI_RANGE/2
 
 FT = FeatureExtractor
+
+current_milli_time = lambda: int(round(time.time() * 1000))
+def get_supervised_fd(config,supervised_td,profile=True):
+	extr = FeatureExtractor(*config)
+
+	calctime = [0,0]
+	features = []
+	supervised = 0
+
+	for data in supervised_td :
+		if data == None : continue
+		if type(data) == tuple :
+			data,supervised = data[0],data[1]
+			extr.clearBuffer()
+
+		begin_calc = current_milli_time()
+		result = extr.gather(data)
+		if result and supervised:
+			features.append((result,supervised))
+			calctime[0] += current_milli_time() - begin_calc
+			calctime[1] += 1
+
+	if profile :
+		time_fillin = float(extr.CALC_SIZE)/256
+		time_calc = float(calctime[0])/calctime[1]
+		return features,time_fillin,time_calc
+	else :
+		return features
