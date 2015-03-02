@@ -54,15 +54,7 @@ class Network(object):
 		super(Network, self).__init__()
 
 		if normalize :
-			sample = zip(*normalize)
-			if len(sample) != input_size :
-				raise Exception("input_size and sample_size missmatch")
-			minarray = map(np.min, sample)
-			maxarray = map(np.max, sample)
-			rangearray = map(lambda x: float(x[0] - x[1])/2 , zip(maxarray,minarray))
-			basearray = map(lambda x: float(x[0] + x[1])/2 , zip(maxarray,minarray))
-
-			self.inputNodes = map(lambda x: Node(1,normalizefn(*x)), zip(rangearray, basearray))
+			self.setMinMax(*self.calcMinMax(normalize))
 		else :
 			self.inputNodes = map(lambda x: Node(1,input_function), range(input_size))
 
@@ -87,6 +79,22 @@ class Network(object):
 		map(lambda x: x[0].setWeight(x[1]), zip(self.inputNodes,weights[0]))
 		map(lambda x: x[0].setWeight(x[1]), zip(self.hiddenNodes,weights[1]))
 		map(lambda x: x[0].setWeight(x[1]), zip(self.outputNodes,weights[2]))
+
+	def setMinMax(self,minarray,maxarray):
+		if len(minarray) != len(self.inputNodes) or len(maxarray) != len(self.inputNodes):
+			raise Exception("network_input_size and min_max_size missmatch")
+
+		rangearray = map(lambda x: float(x[0] - x[1])/2 , zip(maxarray,minarray))
+		basearray = map(lambda x: float(x[0] + x[1])/2 , zip(maxarray,minarray))
+		self.inputNodes = map(lambda x: Node(1,normalizefn(*x)), zip(rangearray, basearray))
+
+	def calcMinMax(self,sample):
+		sample = zip(*sample)
+		if len(sample) != input_size :
+			raise Exception("input_size and sample_size missmatch")
+		minarray = map(np.min, sample)
+		maxarray = map(np.max, sample)
+		return minarray,maxarray
 
 class WekaTrainer(object):
 
@@ -146,8 +154,22 @@ class WekaTrainer(object):
 			if node_idx == len(node_sorted) :
 				break
 
+		self.weights = weights
 		return weights
 
+	def saveTrained(self):
+		pass
+
+	def loadTrained(self):
+		pass
+
+class WekaNetwork(Network):
+	"""docstring for WekaNetwork"""
+	def __init__(self, weightfile):
+		super(WekaNetwork, self).__init__(8, 6, 5, normalize=test)
+		self.trainner = WekaTrainer()
+		self.setWeight(weights)
+		
 
 strFloatList = lambda z : "[%s]"%", ".join(map(lambda x :"%.03f"%x,z))
 

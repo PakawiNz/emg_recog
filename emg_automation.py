@@ -165,7 +165,7 @@ class Automation(QtCore.QObject) :
 					# inlayer, STRUCT.FullConnection, 
 					# outlayer, STRUCT.FullConnection, 
 					# [hidlayer1,hidlayer2], STRUCT.FullConnection, 
-					network, BackpropTrainer)
+					# network, BackpropTrainer)
 
 				# recog = CustomRecognition(len(features[0][0]),*elementANN,reusedDataSet=ds)
 				err = recog.training(5)

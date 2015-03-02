@@ -1,9 +1,21 @@
 from emg_automation import feature_extr,get_rawdata
 from emg_autoweka import autoWEKA
 
+def getPath_raw(filename):
+	return '0raw/%s.txt'%(filename)
+
+def getPath_csv(ctype,filename):
+	return '1store/%s-%d.csv'%(filename,ctype)
+
+def getPath_arff(ctype,filename):
+	return '2arff/%s-%d.arff'%(filename,ctype)
+
+def getPath_train(filename):
+	return '4train/%s.txt'%(filename)
+
 def rawpick(pick,ctype,filename): # pick = constance of each number of record each type 
-	outfile = '2arff/%s-%d.arff'%(filename,ctype)
-	arff = open(outfile,"w")
+	arfffile = getPath_arff(ctype, filename)
+	arff = open(arfffile,"w")
 	# head
 	arff.write("@relation '%s'\n"%(filename))
 	for x in xrange(1,9):
@@ -30,15 +42,15 @@ def rawpick(pick,ctype,filename): # pick = constance of each number of record ea
 			arff.write(lines[p])
 	arff.close()
 
-	return outfile
+	return arfffile
 
 
 def rawtoarff(ctype,filename): #type : 0=one variable, 1=one hot
 	elementFFT = [0,128,4,8,0]
-	rawdata = get_rawdata('0raw/'+filename+'.txt')
+	rawdata = get_rawdata(getPath_raw(filename))
 	features = feature_extr(elementFFT, rawdata, False)
 
-	outfile = '1store/%s-%d.csv'%(filename,ctype)
+	outfile = getPath_csv(filename,ctype)
 	store = open(outfile,"w")
 
 	for fs,o in features :
