@@ -1,9 +1,13 @@
 from emg_fft import FeatureExtractor
+from emg_arff import getPath_train
+import glob,re,os
 import threading
 
-from PyQt4 import QtGui, QtCore
 import pyqtgraph as pg
+from PyQt4 import QtGui, QtCore
 from customplot import SlidingPlot
+
+action_name = ['UNKNW','CIR_L','FLEX','CIR_R','EXTD','REST']
 
 class MainWindow(QtGui.QMainWindow):
 	"""docstring for MainWindow"""
@@ -101,30 +105,43 @@ class MainWindow(QtGui.QMainWindow):
 		widget.currentIndexChanged.connect(lambda x : self.slave.config('OUTPUT_TYPE',x))
 		self.outType = widget
 
+		widget = QtGui.QComboBox()
+		widget.setLocale(QtCore.QLocale(QtCore.QLocale.English,QtCore.QLocale.UnitedStates))
+		widget.currentIndexChanged.connect(self.selectFile)
+		self.trainedFile = widget
+
 		self.calcTime = QtGui.QLabel('0')
-		self.slave.updateTime.connect(lambda x : self.calcTime.setText("  >> %s"%(x)))
+		self.slave.updateTime.connect(lambda x : self.calcTime.setText("  >> %d ms"%(x)))
 
 		self.actLabel = QtGui.QLabel('None')
-		self.slave.updateAct.connect(lambda x : self.actLabel.setText("  %s"%(x)))
+		self.slave.updateAct.connect(lambda x : self.actLabel.setText("  %s"%(action_name[x])))
 
 		layout.setRowStretch(0, 100)
 		layout.addWidget(QtGui.QLabel('') 							, 0,0)
-		layout.addWidget(QtGui.QLabel('Calculation Chunk Size') 	, 1,0)
-		layout.addWidget(self.calcSize								, 2,0)
-		layout.addWidget(QtGui.QLabel('Sliding Step') 				, 3,0)
-		layout.addWidget(self.slideSize								, 4,0)
-		layout.addWidget(QtGui.QLabel('Frequency Domain') 			, 5,0)
-		layout.addWidget(self.freqSize								, 6,0)
-		layout.addWidget(QtGui.QLabel('Trend Chunk Size') 			, 7,0)
-		layout.addWidget(self.trendSize								, 8,0)
-		layout.addWidget(QtGui.QLabel('Output Type') 				, 9,0)
-		layout.addWidget(self.outType								, 10,0)
-		layout.addWidget(QtGui.QLabel('Calculation Time')			, 11,0)
-		layout.addWidget(self.calcTime								, 12,0)
-		layout.addWidget(QtGui.QLabel('Current Activity')			, 13,0)
-		layout.addWidget(self.actLabel								, 14,0)
+		# layout.addWidget(QtGui.QLabel('Calculation Chunk Size') 	, 1,0)
+		# layout.addWidget(self.calcSize								, 2,0)
+		# layout.addWidget(QtGui.QLabel('Sliding Step') 				, 3,0)
+		# layout.addWidget(self.slideSize								, 4,0)
+		# layout.addWidget(QtGui.QLabel('Frequency Domain') 			, 5,0)
+		# layout.addWidget(self.freqSize								, 6,0)
+		# layout.addWidget(QtGui.QLabel('Trend Chunk Size') 			, 7,0)
+		# layout.addWidget(self.trendSize								, 8,0)
+		# layout.addWidget(QtGui.QLabel('Output Type') 				, 9,0)
+		# layout.addWidget(self.outType								, 10,0)
+		layout.addWidget(QtGui.QLabel('Trained File') 				, 11,0)
+		layout.addWidget(self.trainedFile							, 12,0)
+		layout.addWidget(QtGui.QLabel('Calculation Time')			, 13,0)
+		layout.addWidget(self.calcTime								, 14,0)
+		layout.addWidget(QtGui.QLabel('Current Activity')			, 15,0)
+		layout.addWidget(self.actLabel								, 16,0)
+
+		self.refreshFileList()
 
 		return w
+
+	@QtCore.pyqtSlot(str)
+	def selectFile(self,data):
+		self.slave.selectFile(self.trainedFile.currentText())
 
 	@QtCore.pyqtSlot()
 	def btnTrainFN(self):
@@ -143,6 +160,7 @@ class MainWindow(QtGui.QMainWindow):
 	@QtCore.pyqtSlot()
 	def btnTerminateFN(self):
 		self.slave.terminate = True
+		self.refreshFileList()
 
 	@QtCore.pyqtSlot(int)
 	def updateRaw(self,data_new):
@@ -173,14 +191,28 @@ class MainWindow(QtGui.QMainWindow):
 
 	def keyPressEvent(self, event):
 	    if type(event) == QtGui.QKeyEvent and event.key() == QtCore.Qt.Key_A : 
-	    	self.slave.activity = ('CIR_L',1)
+	    	self.slave.activity = (action_name[1],1)
 	    elif type(event) == QtGui.QKeyEvent and event.key() == QtCore.Qt.Key_S:
-	    	self.slave.activity = ('FLEX',2)
+	    	self.slave.activity = (action_name[2],2)
 	    elif type(event) == QtGui.QKeyEvent and event.key() == QtCore.Qt.Key_D:
-	    	self.slave.activity = ('CIR_R',3)
+	    	self.slave.activity = (action_name[3],3)
 	    elif type(event) == QtGui.QKeyEvent and event.key() == QtCore.Qt.Key_W:
-	    	self.slave.activity = ('EXTD',4)
+	    	self.slave.activity = (action_name[4],4)
 	    elif type(event) == QtGui.QKeyEvent and event.key() == QtCore.Qt.Key_Q:
-	    	self.slave.activity = ('REST',5)
+	    	self.slave.activity = (action_name[5],5)
 	    elif type(event) == QtGui.QKeyEvent and event.key() == QtCore.Qt.Key_E:
 	    	self.slave.activity = None
+
+	def refreshFileList(self):
+		filetag = re.split(r'(<>)',getPath_train('<>'))
+		prefix = re.split(r'/',filetag[0])[-1]
+		extension = filetag[2]
+		directory = os.path.dirname(filetag[0])
+		filelist = os.listdir(directory)
+
+		self.trainedFile.clear()
+
+		for afile in filelist:
+			match = re.search(prefix + r'([^.]+)' + extension, afile)
+			filename = match.group(1)
+			self.trainedFile.addItem(filename)
