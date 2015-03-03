@@ -53,7 +53,7 @@ def fd_store(filename,ctype=0): #type : 0=one variable, 1=one hot
 def storepick_arff(pick,filename,ctype=0): # pick = constance of each number of record each type 
 	# gather csv
 	data = []
-	stores = glob.glob('1store/*.csv')
+	stores = glob.glob(getPath_csv(0,'*'))
 	for store in stores:
 		print store
 		print pick
