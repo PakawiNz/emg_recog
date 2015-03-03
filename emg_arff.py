@@ -1,4 +1,3 @@
-from emg_autoweka import autoWEKA
 from emg_fft import get_supervised_fd
 import re,time
 import glob
@@ -6,16 +5,52 @@ import glob
 def getPath_raw(filename):
 	return '0raw/%s.txt'%(filename)
 
-def getPath_csv(ctype,filename):
-	return '1store/%s-%d.csv'%(filename,ctype)
+def getPath_csv(filename):
+	return '1store/%s.csv'%(filename)
 
-def getPath_arff(ctype,filename):
-	return '2arff/%s-%d.arff'%(filename,ctype)
+def getPath_arff(filename):
+	return '2arff/%s.arff'%(filename)
+
+def getPath_stat(exp,filename,note=0):
+	return '3stat/%s/%s-%s-%s.csv'%(exp,filename,exp,note)
 
 def getPath_train(filename):
 	return '4train/%s.emg'%(filename)
 
-def storepick_arff(pick,ctype,filename): # pick = constance of each number of record each type 
+def arffToData(filename):
+	arff = open(getPath_arff(filename),"r").read()
+	data = re.search(r'@data\s+([\d.,\s]+).*', arff).group(1).splitlines()
+	data = map(lambda x : x.split(','),data)
+	data = map(lambda x : map(float, x),data)
+	return data
+
+def fd_store(filename,ctype=0): #type : 0=one variable, 1=one hot
+	elementFFT = [0,128,4,8,0]
+	rawdata = get_supervised_td(getPath_raw(filename))
+	features = get_supervised_fd(elementFFT, rawdata, False)
+
+	outfile = getPath_csv(filename)
+	store = open(outfile,"w")
+
+	for fs,o in features :
+		for f in fs :
+			store.write("%0.6f,"%(f))
+		if ctype == 0 :
+			store.write("%d\n"%(o))
+		else :
+			for x in xrange(1,6):
+				if x == o and x == 5 :
+					store.write("1\n")
+				elif x == o and x != 5 :
+					store.write("1,")
+				elif x != o and x == 5 :
+					store.write("0\n")
+				elif x != o and x != 5 :
+					store.write("0,")
+	store.close()
+	return features
+
+def storepick_arff(pick,filename,ctype=0): # pick = constance of each number of record each type 
 	# gather csv
 	data = []
 	stores = glob.glob('1store/*.csv')
@@ -34,7 +69,7 @@ def storepick_arff(pick,ctype,filename): # pick = constance of each number of re
 	input_size = len(minfd)
 	output_size = 5
 
-	arfffile = getPath_arff(ctype, filename)
+	arfffile = getPath_arff( filename)
 	arff = open(arfffile,"w")
 	arff.write("%% min: %s \n"%(minfd))
 	arff.write("%% max: %s \n"%(maxfd))
@@ -62,32 +97,6 @@ def storepick_arff(pick,ctype,filename): # pick = constance of each number of re
 
 	arff.close()
 
-def fd_store(ctype,filename): #type : 0=one variable, 1=one hot
-	elementFFT = [0,128,4,8,0]
-	rawdata = get_supervised_td(getPath_raw(filename))
-	features = get_supervised_fd(elementFFT, rawdata, False)
-
-	outfile = getPath_csv(ctype,filename)
-	store = open(outfile,"w")
-
-	for fs,o in features :
-		for f in fs :
-			store.write("%f,"%(f))
-		if ctype == 0 :
-			store.write("%.00f\n"%(o))
-		else :
-			for x in xrange(1,6):
-				if x == o and x == 5 :
-					store.write("1\n")
-				elif x == o and x != 5 :
-					store.write("1,")
-				elif x != o and x == 5 :
-					store.write("0\n")
-				elif x != o and x != 5 :
-					store.write("0,")
-	store.close()
-	return features
-
 def __tuplation(x):
 	try :
 		if ',' in x :
@@ -105,42 +114,36 @@ def get_supervised_td(filename):
 		result += map(__tuplation,line)
 	return result
 
+def getFlienameFromPaths(pathList):
+	import sys
+	for path in pathList:
+		if sys.platform.startswith('win'):
+			sign = '\\' # for windows
+		elif sys.platform.startswith('darwin') or sys.platform.startswith('linux') or sys.platform.startswith('cygwin'):
+			sign = '/' # for mac
+		else:
+			raise EnvironmentError('Unsupported class path')
+		filename = map(lambda x : x.split('.')[0].split(sign)[-1],pathList)
+	return filename	
+
 if __name__ == '__main__':
-	import glob
-	ctype = 0
 
 	#rawToStore /
-	# txt = glob.glob('0raw/*.txt')
-	# for x in txt:
-	# 	filename = x.split('.')[0].split('/')[1] # for mac
-	# 	# filename = x.split('.')[0].split('\\')[1] # for windows
-	# 	fd_store(ctype, filename)
+	# import glob
+	# pathList = glob.glob('0raw/*.txt')
+	# for filename in getFlienameFromPaths(pathList):
+	# 	fd_store(filename)
+
 
 	#pickDataset /
 	# picks = [5000,10000,15000,20000,25000,30000]
+	# picks = [500,1000,1500,2000,2500,3000,3500,4000]
 	# for pick in picks:
-	# 	storepick_arff(pick/25,ctype,"data"+str(pick))
-	storepick_arff(10,ctype,"datatestpick"+str(10))
-	
-	#autoDataTest
-	# autoWEKA('Exp0','2arff/data10000-0.arff')
+	# 	storepick_arff(pick/25,"data"+str(pick))
+	# storepick_arff(10,"datatestpick"+str(10))
 
-	# autoWEKA('Exp1','2arff/data10000-0.arff')
-	
-	# autoWEKA('Exp2','2arff/data10000-0.arff')
-	# autoWEKA('Exp2','2arff/data15000-0.arff')
-	# autoWEKA('Exp2','2arff/data20000-0.arff')
-	# autoWEKA('Exp2','2arff/data25000-0.arff')
-	# autoWEKA('Exp2','2arff/data30000-0.arff')
-	# autoWEKA('Exp2','2arff/data35000-0.arff')
-	# autoWEKA('Exp2','2arff/data5000-0.arff')
+	# arffToData /
+	# arffToData('data5000')
 
-
-	# autoWEKA('Exp3','2arff/data10000-0.arff')
-	# autoWEKA('Exp3','2arff/data15000-0.arff')
-	# autoWEKA('Exp3','2arff/data20000-0.arff')
-	# autoWEKA('Exp3','2arff/data25000-0.arff')
-	# autoWEKA('Exp3','2arff/data30000-0.arff')
-	# autoWEKA('Exp3','2arff/data35000-0.arff')
-	# autoWEKA('Exp3','2arff/data5000-0.arff')
+	pass
 

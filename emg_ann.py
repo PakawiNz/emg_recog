@@ -1,4 +1,5 @@
 from emg_arff import getPath_arff,getPath_train,fd_store,storepick_arff
+from emg_autoweka import getWekaPath,getStat_WEKA
 import numpy as np
 import re, os
 import datetime
@@ -99,13 +100,13 @@ class WekaTrainer(object):
 		):
 
 		self.trained = False
-		self.WEKA_PATH = '-classpath "C:\Program Files\Weka-3-6\weka.jar"'
+		self.WEKA_PATH = getWekaPath()
 		self.WEKA_CLASS = 'weka.classifiers.functions.MultilayerPerceptron'
-		self.WEKA_OPTION = ' -L %.2f -M %.2f -N %d -x %d -V 0 -S 0 -E 20 -H %s%s -B -v %s %s'%(
+		self.WEKA_OPTION = ' -L %.2f -M %.2f -N %d -x %d -V 0 -S 0 -E 20 -H %s%s -B -R -v %s%s'%(
 				LEARNING_RATE,MOMENTUM,EPOCH,N_FOLD,HIDDEN1,
 				',%s'%HIDDEN2 if HIDDEN2 else '',
 				'-C' if not NUMR_NORM else '',
-				'-I' if not ATTR_NORM else '',)
+				' -I' if not ATTR_NORM else '',)
 
 		self.hidden_size = []
 		for HIDDEN in (HIDDEN1,HIDDEN2):
@@ -122,28 +123,28 @@ class WekaTrainer(object):
 
 
 	def train(self,arfffile):
-		afile = open(getPath_arff(0,arfffile),'r')
+		afile = open(getPath_arff(arfffile),'r')
 		self.minarray = readarray(afile.readline(),float)
 		self.maxarray = readarray(afile.readline(),float)
 		input_size,output_size = readarray(afile.readline(),int)
 		afile.close()
 
 		self.layerconfig = [input_size] + [fn(input_size,output_size) for fn in self.hidden_size] + [output_size]
-
 		weights = [map(lambda x:[WekaTrainer.W0,1],range(input_size))] +\
 			[map(lambda x:[],range(x)) for x in self.layerconfig[1:]]
 
 		print "START WEKA"
 		start = datetime.datetime.now()
-		WEKA_CMD = " ".join(["java",self.WEKA_PATH,self.WEKA_CLASS,self.WEKA_OPTION,"-t",getPath_arff(0,arfffile)])
+		WEKA_CMD = " ".join(["java",self.WEKA_PATH,self.WEKA_CLASS,self.WEKA_OPTION,"-t",getPath_arff(arfffile)])
 		print WEKA_CMD
 		result = os.popen(WEKA_CMD).read()
 		lines = result.splitlines()
 		# print result
-		accu = re.search(r'Correctly Classified Instances\s+(\d+)\s+([\d.]+).*', result)
-		print "FINISH WEKA with Accuracy %s%%"%(accu.group(2))
-		print "FINISH WEKA take time %s"%(datetime.datetime.now() - start)
-
+		
+		self.wekastat = getStat_WEKA(result)
+		self.wekastat['TIME'] = datetime.datetime.now() - start
+		print "FINISH WEKA take time %s"%(self.wekastat['TIME'])
+		print "FINISH WEKA with Accuracy : %s%%"%(self.wekastat['ACC'])
 		node_idx = 0
 		getting_attr = False
 		node_sorted = weights[-1] + weights[-2] + (weights[-3] if len(weights) == 4 else [])
@@ -199,6 +200,9 @@ class WekaTrainer(object):
 			for weight in layer:
 				afile.write("%s%d %s\n"%(name,count,weight))
 				count += 1
+		afile.write("== Stat form WEKA ==\n")
+		for key in sorted(self.wekastat):
+			afile.write("%s\t%s\n"%(key, self.wekastat[key]))
 
 		afile.close()
 
@@ -232,35 +236,37 @@ class WekaTrainer(object):
 if __name__ == '__main__':
 
 	trainer = WekaTrainer()
+	# filename = "150206"
+	filename = "data5000"
 
-	# supervised = fd_store(0, "150206")
-	# storepick_arff(5000, 0, "150206")
-	# trainer.train("150206")
-	# trainer.saveTrained("150207")
-	trainer.loadTrained("150206")
-	network = trainer.buildNetwork()
+	# # supervised = fd_store( filename)
+	# storepick_arff(5000, filename)
+	trainer.train(filename)
+	trainer.saveTrained(filename)
+	# trainer.loadTrained(filename)
+	# network = trainer.buildNetwork()
 
-	supervised = [([21.118532,62.999746,12.684460,10.519438,10.387631,11.685056,62.565823,19.993782],5),
-		([19.310054,64.152326,13.212357,8.860584,8.858590,11.498716,64.569127,18.682508],5),
-		([16.992022,64.612842,9.747459,7.517548,7.257055,8.316456,63.423046,17.723756],5),
-		([18.766140,63.760157,14.643641,11.581990,11.067794,14.170338,63.207139,18.051383],5),
-		([24.611953,65.072881,9.259757,7.909290,7.459348,9.559294,64.841156,21.564185],5),
-		([18.568221,66.322171,10.374216,11.080600,11.160580,9.379371,66.122006,16.911144],5),
-		([21.881888,65.216293,13.490270,10.054914,9.735708,12.226527,65.474979,21.068340],5),
-		([23.189213,63.061800,11.986820,10.701041,10.135923,11.014461,64.207857,21.266626],5),
-		([19.578129,64.249013,14.982886,10.110107,9.541771,14.604983,65.091028,16.698812],5),
-		([25.803094,65.136486,9.737080,9.920804,9.835623,9.691144,64.626364,22.955705],5),
-		([21.060543,61.647437,8.773530,10.652985,11.005020,7.922391,61.748437,18.933209],5),]
+	# supervised = [([21.118532,62.999746,12.684460,10.519438,10.387631,11.685056,62.565823,19.993782],5),
+	# 	([19.310054,64.152326,13.212357,8.860584,8.858590,11.498716,64.569127,18.682508],5),
+	# 	([16.992022,64.612842,9.747459,7.517548,7.257055,8.316456,63.423046,17.723756],5),
+	# 	([18.766140,63.760157,14.643641,11.581990,11.067794,14.170338,63.207139,18.051383],5),
+	# 	([24.611953,65.072881,9.259757,7.909290,7.459348,9.559294,64.841156,21.564185],5),
+	# 	([18.568221,66.322171,10.374216,11.080600,11.160580,9.379371,66.122006,16.911144],5),
+	# 	([21.881888,65.216293,13.490270,10.054914,9.735708,12.226527,65.474979,21.068340],5),
+	# 	([23.189213,63.061800,11.986820,10.701041,10.135923,11.014461,64.207857,21.266626],5),
+	# 	([19.578129,64.249013,14.982886,10.110107,9.541771,14.604983,65.091028,16.698812],5),
+	# 	([25.803094,65.136486,9.737080,9.920804,9.835623,9.691144,64.626364,22.955705],5),
+	# 	([21.060543,61.647437,8.773530,10.652985,11.005020,7.922391,61.748437,18.933209],5),]
 
-	# trainner.train(arfffile)
-	# recog = Network(8, 6, 5, normalize=test)
-	# recog.setWeight(trainner.weights)
+	# # # trainner.train(arfffile)
+	# # # recog = Network(8, 6, 5, normalize=test)
+	# # # recog.setWeight(trainner.weights)
 
-	count = 0
-	for i in supervised:
-		after_input,after_hidden,after_output,result = network.activate(i[0],verbose=True)
+	# count = 0
+	# for i in supervised:
+	# 	after_input,after_hidden,after_output,result = network.activate(i[0],verbose=True)
 
-		if result + 1 == i[1] : 
-			count += 1
+	# 	if result + 1 == i[1] : 
+	# 		count += 1
 
-	print '%0.01f%%'%(count*100.0/len(supervised))
+	# print '%0.01f%%'%(count*100.0/len(supervised))
