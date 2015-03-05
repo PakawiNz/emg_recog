@@ -1,12 +1,10 @@
-from emg_serial import SerialManager
 from emg_fft import FeatureExtractor,current_milli_time
-from emg_ann import WekaTrainer
+from emg_serial import SerialManager
+from emg_weka import WekaTrainer
 from main_ui import MainWindow
 
 import sys
 import time
-import datetime
-import numpy as np
 
 from PyQt4 import QtGui, QtCore
 
@@ -50,6 +48,7 @@ class WorkingThread(QtCore.QObject):
 		trainer = WekaTrainer()
 		trainer.loadTrained(self.trainfile)
 		self.network = trainer.buildNetwork()
+		print self.trainfile
 
 		infinite = True
 		while infinite :
@@ -70,7 +69,7 @@ class WorkingThread(QtCore.QObject):
 			if result : 
 				self.updateTime.emit(current_milli_time() - calctime)
 				self.updateFFT.emit(result)
-				action = self.network.activate(result)
+				action = self.network.activate(result) + 1
 				self.updateAct.emit(action)
 			## -----------------------------------------------------------------------------
 

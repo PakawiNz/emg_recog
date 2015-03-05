@@ -22,6 +22,7 @@ def arffToData(filename):
 	data = re.search(r'@data\s+([\d.,\s]+).*', arff).group(1).splitlines()
 	data = map(lambda x : x.split(','),data)
 	data = map(lambda x : map(float, x),data)
+	data = map(lambda x : (x[:-1],x[-1]), data)
 	return data
 
 def fd_store(filename,ctype=0): #type : 0=one variable, 1=one hot
@@ -53,7 +54,12 @@ def fd_store(filename,ctype=0): #type : 0=one variable, 1=one hot
 def storepick_arff(pick,filename,ctype=0): # pick = constance of each number of record each type 
 	# gather csv
 	data = []
-	stores = glob.glob(getPath_csv(0,'*'))
+	if pick == 0 :
+		pick = 1000000
+		stores = glob.glob(getPath_csv(filename))
+	else :
+		stores = glob.glob(getPath_csv('*'))
+
 	for store in stores:
 		print store
 		print pick

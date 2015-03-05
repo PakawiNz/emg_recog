@@ -1,4 +1,6 @@
 from emg_serial import SerialManager
+from emg_arff import fd_store,storepick_arff,getPath_raw
+from emg_weka import WekaTrainer
 
 import sys
 import datetime
@@ -14,6 +16,10 @@ class WorkingThread(QtCore.QObject):
 	updateRaw = QtCore.pyqtSignal(int)
 	updateFFT = QtCore.pyqtSignal(list)
 
+	def __init__(self):
+		super(WorkingThread, self).__init__()
+		self.filename = datetime.datetime.now().strftime("%y%m%d")
+
 	def datastore(self):
 		ser = SerialManager()
 		self.terminate = False
@@ -21,7 +27,7 @@ class WorkingThread(QtCore.QObject):
 		lastActivity = 0
 
 		count = 0
-		mem = open(datetime.datetime.now().strftime("0raw/recog %y%m%d.txt"),'a+')
+		mem = open(getPath_raw(self.filename),'a+')
 		while not self.terminate :
 			data = ser.recieve().ch1
 			self.updateRaw.emit(data)
@@ -46,8 +52,12 @@ class WorkingThread(QtCore.QObject):
 	def train(self,sec=1):
 		self.datastore()
 
-	def play(self,sec=1):
-		return
+	def convert(self):
+		fd_store(self.filename)
+		storepick_arff(0, self.filename)
+		trainer = WekaTrainer()
+		trainer.train(self.filename)
+		trainer.saveTrained(self.filename)
 
 
 class MainWindow(QtGui.QMainWindow):
@@ -68,6 +78,10 @@ class MainWindow(QtGui.QMainWindow):
 		widget.clicked.connect(self.btnTrainFN)
 		self.btnTrain = widget
 
+		widget = QtGui.QPushButton('Convert')
+		widget.clicked.connect(self.btnConvertFN)
+		self.btnConvert = widget
+
 		widget = QtGui.QPushButton('Terminate')
 		widget.setDisabled(True)
 		widget.clicked.connect(self.btnTerminateFN)
@@ -84,11 +98,12 @@ class MainWindow(QtGui.QMainWindow):
 		self.plotArea = widget
 
 		layout.addWidget(self.btnTrain							,1,0)
-		layout.addWidget(self.btnTerminate						,2,0)
-		layout.addWidget(QtGui.QLabel('Data Count')				,3,0)
-		layout.addWidget(self.calcTime							,4,0)
-		layout.addWidget(QtGui.QLabel('Current Activity')		,5,0)
-		layout.addWidget(self.actLabel							,6,0)
+		layout.addWidget(self.btnConvert						,2,0)
+		layout.addWidget(self.btnTerminate						,3,0)
+		layout.addWidget(QtGui.QLabel('Data Count')				,4,0)
+		layout.addWidget(self.calcTime							,5,0)
+		layout.addWidget(QtGui.QLabel('Current Activity')		,6,0)
+		layout.addWidget(self.actLabel							,7,0)
 		layout.addWidget(self.plotArea							,0,1,10,1)
 
 		self.resize(1000,200)
@@ -97,6 +112,11 @@ class MainWindow(QtGui.QMainWindow):
 	@QtCore.pyqtSlot()
 	def btnTrainFN(self):
 		t = threading.Thread(target=self.btnTrain_slave)
+		t.start()
+
+	@QtCore.pyqtSlot()
+	def btnConvertFN(self):
+		t = threading.Thread(target=self.slave.convert)
 		t.start()
 
 	@QtCore.pyqtSlot()
@@ -109,9 +129,11 @@ class MainWindow(QtGui.QMainWindow):
 
 	def btnTrain_slave(self):
 		self.btnTrain.setDisabled(True)
+		self.btnConvert.setDisabled(True)
 		self.btnTerminate.setDisabled(False)
 		self.slave.train(0)
 		self.btnTrain.setDisabled(False)
+		self.btnConvert.setDisabled(False)
 		self.btnTerminate.setDisabled(True)
 
 	def keyPressEvent(self, event):
