@@ -1,21 +1,36 @@
 from emg_fft import get_supervised_fd
-import re,time
+import re,time,os
 import glob
 
+def mkdirs(path):
+	dirname = os.path.dirname(path)
+	if not os.path.exists(dirname):
+	    os.makedirs(dirname)
+
 def getPath_raw(filename):
-	return '0raw/%s.txt'%(filename)
+	path = '0raw/%s.txt'%(filename)
+	mkdirs(path)
+	return path
 
 def getPath_csv(filename):
-	return '1store/%s.csv'%(filename)
+	path = '1store/%s.csv'%(filename)
+	mkdirs(path)
+	return path
 
 def getPath_arff(filename):
-	return '2arff/%s.arff'%(filename)
+	path = '2arff/%s.arff'%(filename)
+	mkdirs(path)
+	return path
 
 def getPath_stat(exp,filename,note=0):
-	return '3stat/%s/%s-%s-%s.csv'%(exp,filename,exp,note)
+	path = '3stat/%s/%s-%s-%s.csv'%(exp,filename,exp,note)
+	mkdirs(path)
+	return path
 
 def getPath_train(filename):
-	return '4train/%s.emg'%(filename)
+	path = '4train/%s.emg'%(filename)
+	mkdirs(path)
+	return path
 
 def arffToData(filename):
 	arff = open(getPath_arff(filename),"r").read()
