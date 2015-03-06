@@ -1,7 +1,9 @@
 from emg_arff import getPath_arff,getPath_train,fd_store,storepick_arff,arffToData
-import re, subprocess, sys
+import re, subprocess, sys, os
 import datetime
 import subprocess
+
+isLinux = sys.platform.startswith('linux')
 
 def getWekaPath() :
 	if sys.platform.startswith('win'):
@@ -94,13 +96,14 @@ class WekaTrainer(object):
 			elif type(HIDDEN) is int:
 				self.hidden_size.append(lambda x,y : HIDDEN)
 
-	def runWEKA(self,arfffile,statOnly=False):
+	def runWEKA(self,arfffile,statOnly=False,processStore=[]):
 		start = datetime.datetime.now()
 		WEKA_CMD = " ".join(["java",self.WEKA_PATH,self.WEKA_CLASS,self.WEKA_OPTION,"-t",getPath_arff(arfffile)])
 		if not statOnly : print WEKA_CMD
-		run = subprocess.Popen(WEKA_CMD, stdout=subprocess.PIPE, shell=True)
+		run = subprocess.Popen(WEKA_CMD, stdout=subprocess.PIPE, shell=isLinux)
+		processStore.append(run)
 		result = run.communicate()[0]
-
+		processStore.remove(run)
 		if statOnly : return getStat_WEKA(result,True,False)
 		
 		stat = getStat_WEKA(result)

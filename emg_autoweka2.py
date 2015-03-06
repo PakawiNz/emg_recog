@@ -1,12 +1,12 @@
 from emg_arff import getPath_stat
-from emg_weka import WekaTrainer
+from emg_weka import WekaTrainer,isLinux
 
 from random import shuffle
 import multiprocessing as mp
 import itertools
 import datetime
 import threading
-import sys,time
+import sys,signal,os
 
 class AutoWekaWorker(object):
 	"""docstring for AutoWekaWorker"""
@@ -21,6 +21,7 @@ class AutoWekaWorker(object):
 		self.nextwrite = start
 		self.buffer = {}
 		self.threadAmount = threadAmount
+		self.processStore = []
 		if start < 0 :
 			raise Exception('invalid start value')
 		if end < 0 :
@@ -65,7 +66,7 @@ class AutoWekaWorker(object):
 
 			trainer = WekaTrainer(**var)
 			start = datetime.datetime.now()
-			stat = trainer.runWEKA(self.filename,True)
+			stat = trainer.runWEKA(self.filename,True,self.processStore)
 			duration = datetime.datetime.now()-start
 			order = [count,var['EPOCH'],var['LEARNING_RATE'],var['MOMENTUM'],var['HIDDEN1'],var['HIDDEN2'],]
 			csvdata = ",".join(map(str,list(order)+[duration]+stat+[trainer.WEKA_OPTION]))
@@ -107,6 +108,7 @@ def multiAutoWEKA(exp,filename,threadAmount,start=0,end=100000):
 		kb = raw_input()
 		if kb == 'e':
 			print "EXITING"
+			map(lambda x: x.terminate(), worker.processStore)
 			worker.flush()
 			sys.exit()
 		elif worker.threadAmount == 0:
@@ -126,6 +128,10 @@ if __name__ == '__main__':
 		start = int(sys.argv[2])
 	if len(sys.argv) >= 4 :
 		end = int(sys.argv[3])
+
+	print "WARNING : In order to exit, you should (type 'e') instead of (CTRL+C), unless some result may lost"
+	if isLinux :
+		print "WARNING : (Linux) You should kill the java process by yourself!! after exit with (type 'e')"
 
 	print 'thread amount = %d'%(thread)
 	print 'start position = %d'%(start)
