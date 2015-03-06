@@ -10,20 +10,25 @@ import sys
 
 class AutoWekaWorker(object):
 	"""docstring for AutoWekaWorker"""
-	def __init__(self,exp,filename,cartesian,start):
+	def __init__(self,exp,filename,cartesian,start,end):
 		super(AutoWekaWorker, self).__init__()
 		self.exp = exp
 		self.filename = filename
 		self.cartesian = cartesian[start:]
 		self.count = start
+		self.end = end
 		self.lock = threading.Lock()
 		self.nextwrite = start
 		self.buffer = {}
+		if start < 0 :
+			raise Exception('invalid start value')
+		if end < 0 :
+			raise Exception('invalid end value')
 
 	def flush(self):
-		self.writeout(-1, '',True)
+		self.writeout(force=True)
 
-	def writeout(self,count,csvdata,force=False):
+	def writeout(self,count=-1,csvdata='',force=False):
 		if self.nextwrite == count :
 			afile = open(getPath_stat(self.exp,self.filename,note=''),'a+')
 			afile.write(csvdata+'\n')
@@ -42,6 +47,10 @@ class AutoWekaWorker(object):
 	def work(self):
 		
 		while len(self.cartesian) > 0:
+			if self.count > self.end :
+				self.writeout()
+				exit()
+
 			self.lock.acquire()
 			var = self.cartesian.pop(0)
 			count = self.count
@@ -73,7 +82,7 @@ def createCartesian(epoch,momentum,learning_rate,hidden0,hidden1):
 
 	return cartesian
 
-def multiAutoWEKA(exp,filename,threadAmount,start=0):
+def multiAutoWEKA(exp,filename,threadAmount,start=0,end=100000):
 	# epoch 			= [500,1000,2000,4000]
 	epoch 			= [500]
 	momentum 		= [0.05,0.1,0.2,0.4,0.8,1.6,3.2]
@@ -83,7 +92,7 @@ def multiAutoWEKA(exp,filename,threadAmount,start=0):
 
 	cartesian = createCartesian(epoch, momentum, learning_rate, hidden0, hidden1)
 
-	worker = AutoWekaWorker(exp, filename, cartesian, start)
+	worker = AutoWekaWorker(exp, filename, cartesian, start, end)
 	for i in range(threadAmount) :
 		t = threading.Thread(target=worker.work,name="awk%d"%i)
 		t.daemon = True
@@ -99,13 +108,17 @@ def multiAutoWEKA(exp,filename,threadAmount,start=0):
 if __name__ == '__main__':
 	thread = 1
 	start = 0
+	end = 100000
 
 	if len(sys.argv) >= 2 :
 		thread = int(sys.argv[1])
 	if len(sys.argv) >= 3 :
 		start = int(sys.argv[2])
+	if len(sys.argv) >= 4 :
+		end = int(sys.argv[3])
 
 	print 'thread amount = %d'%(thread)
 	print 'start position = %d'%(start)
+	print 'end position = %d'%(start)
 
-	multiAutoWEKA('Exp2', 'data10000', thread, start)
+	multiAutoWEKA('Exp2', 'data10000', thread, start, end)
