@@ -6,11 +6,11 @@ import multiprocessing as mp
 import itertools
 import datetime
 import threading
-import sys
+import sys,time
 
 class AutoWekaWorker(object):
 	"""docstring for AutoWekaWorker"""
-	def __init__(self,exp,filename,cartesian,start,end):
+	def __init__(self,exp,filename,cartesian,start,end,threadAmount):
 		super(AutoWekaWorker, self).__init__()
 		self.exp = exp
 		self.filename = filename
@@ -20,6 +20,7 @@ class AutoWekaWorker(object):
 		self.lock = threading.Lock()
 		self.nextwrite = start
 		self.buffer = {}
+		self.threadAmount = threadAmount
 		if start < 0 :
 			raise Exception('invalid start value')
 		if end < 0 :
@@ -47,16 +48,20 @@ class AutoWekaWorker(object):
 	def work(self):
 		
 		while len(self.cartesian) > 0:
-			if self.count > self.end :
-				self.writeout()
-				exit()
-
 			self.lock.acquire()
-			var = self.cartesian.pop(0)
 			count = self.count
-			self.count += 1
-			print count,var
-			self.lock.release()
+			if count > self.end :
+				self.writeout()
+				self.threadAmount -= 1
+				if self.threadAmount == 0 :
+					print "\n\n >>>>>> AUTOMATION FINISHED <<<<<<"
+				self.lock.release()
+				break
+			else :
+				var = self.cartesian.pop(0)
+				self.count += 1
+				print count,var
+				self.lock.release()
 
 			trainer = WekaTrainer(**var)
 			start = datetime.datetime.now()
@@ -92,7 +97,7 @@ def multiAutoWEKA(exp,filename,threadAmount,start=0,end=100000):
 
 	cartesian = createCartesian(epoch, momentum, learning_rate, hidden0, hidden1)
 
-	worker = AutoWekaWorker(exp, filename, cartesian, start, end)
+	worker = AutoWekaWorker(exp, filename, cartesian, start, end, threadAmount)
 	for i in range(threadAmount) :
 		t = threading.Thread(target=worker.work,name="awk%d"%i)
 		t.daemon = True
@@ -104,6 +109,11 @@ def multiAutoWEKA(exp,filename,threadAmount,start=0,end=100000):
 			print "EXITING"
 			worker.flush()
 			sys.exit()
+		elif worker.threadAmount == 0:
+			print "EXITING"
+			sys.exit()
+
+		print "Automation is on progress (type 'e' to force exit)"
 
 if __name__ == '__main__':
 	thread = 1
