@@ -1,5 +1,4 @@
 from emg_arff import getPath_arff,getPath_train,fd_store,storepick_arff,arffToData
-from emg_ann import Network
 import re, subprocess, sys
 import datetime
 import subprocess
@@ -7,7 +6,9 @@ import subprocess
 def getWekaPath() :
 	if sys.platform.startswith('win'):
 		WEKA_PATH = '-classpath "C:\Program Files\Weka-3-7\weka.jar"' #for windows
-	elif sys.platform.startswith('linux') or sys.platform.startswith('cygwin') or sys.platform.startswith('darwin'):
+	elif sys.platform.startswith('linux') :
+		WEKA_PATH = '-classpath "/home/pakawinz/Workspace/weka.jar"' #for linux
+	elif sys.platform.startswith('darwin'):
 		WEKA_PATH = '-classpath "/Users/Gift/Downloads/meka-1.7.5/lib/weka.jar"' #for mac
 	else:
 		raise EnvironmentError('Unsupported class path')
@@ -97,7 +98,7 @@ class WekaTrainer(object):
 		start = datetime.datetime.now()
 		WEKA_CMD = " ".join(["java",self.WEKA_PATH,self.WEKA_CLASS,self.WEKA_OPTION,"-t",getPath_arff(arfffile)])
 		if not statOnly : print WEKA_CMD
-		run = subprocess.Popen(WEKA_CMD, stdout=subprocess.PIPE)
+		run = subprocess.Popen(WEKA_CMD, stdout=subprocess.PIPE, shell=True)
 		result = run.communicate()[0]
 
 		if statOnly : return getStat_WEKA(result,True,False)
@@ -191,6 +192,7 @@ class WekaTrainer(object):
 		return self.layerconfig
 
 	def buildNetwork(self):
+		from emg_ann import Network
 		if not self.trained :
 			raise Exception("This trainer is not trained.")
 
@@ -208,40 +210,21 @@ if __name__ == '__main__':
 
 	trainer = WekaTrainer()
 	filename = "150305"
-	# filename = "example"
-	# filename = "stupid"
 
 	# fd_store(filename)
 	# storepick_arff(0, filename)
-	trainer.train(filename)
-	trainer.saveTrained(filename)
+	# trainer.train(filename)
+	# trainer.saveTrained(filename)
 	# trainer.loadTrained(filename)
 	# network = trainer.buildNetwork()
-	supervised = arffToData(filename)
-	# print supervised
+	# supervised = arffToData(filename)
 
-	# supervised = [([21.118532,62.999746,12.684460,10.519438,10.387631,11.685056,62.565823,19.993782],5),
-	# 	([19.310054,64.152326,13.212357,8.860584,8.858590,11.498716,64.569127,18.682508],5),
-	# 	([16.992022,64.612842,9.747459,7.517548,7.257055,8.316456,63.423046,17.723756],5),
-	# 	([18.766140,63.760157,14.643641,11.581990,11.067794,14.170338,63.207139,18.051383],5),
-	# 	([24.611953,65.072881,9.259757,7.909290,7.459348,9.559294,64.841156,21.564185],5),
-	# 	([18.568221,66.322171,10.374216,11.080600,11.160580,9.379371,66.122006,16.911144],5),
-	# 	([21.881888,65.216293,13.490270,10.054914,9.735708,12.226527,65.474979,21.068340],5),
-	# 	([23.189213,63.061800,11.986820,10.701041,10.135923,11.014461,64.207857,21.266626],5),
-	# 	([19.578129,64.249013,14.982886,10.110107,9.541771,14.604983,65.091028,16.698812],5),
-	# 	([25.803094,65.136486,9.737080,9.920804,9.835623,9.691144,64.626364,22.955705],5),
-	# 	([21.060543,61.647437,8.773530,10.652985,11.005020,7.922391,61.748437,18.933209],5),]
+	# count = 0
+	# for i in supervised:
+	# 	after_input,after_hidden,after_output,result = network.activate(i[0],verbose=True)
+	# 	# print after_input,result+1,i[1]
 
-	# # # trainner.train(arfffile)
-	# # # recog = Network(8, 6, 5, normalize=test)
-	# # # recog.setWeight(trainner.weights)
+	# 	if result + 1 == i[1] : 
+	# 		count += 1
 
-	count = 0
-	for i in supervised:
-		after_input,after_hidden,after_output,result = network.activate(i[0],verbose=True)
-		# print after_input,result+1,i[1]
-
-		if result + 1 == i[1] : 
-			count += 1
-
-	print '%0.01f%%'%(count*100.0/len(supervised))
+	# print '%0.01f%%'%(count*100.0/len(supervised))
