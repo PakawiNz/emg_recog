@@ -23,7 +23,7 @@ def calcMinMax(sample):
 
 DATA = [[],[],[],[],[],[],[],[],[]]
 
-def getStat_WEKA(resultString,toList=0): #toList == 1 : list of stat, 0 : dict of stat
+def getStat_WEKA(resultString,convertToList=False,verbose=True):
 	ACCU = re.search(r'Correctly Classified Instances\s+(\d+)\s+([\d.]+).*', resultString).group(2)
 	EPE	 = ''
 	MAE	 = re.search(r'Mean absolute error\s+([\d.]+).*', resultString).group(1)
@@ -32,7 +32,8 @@ def getStat_WEKA(resultString,toList=0): #toList == 1 : list of stat, 0 : dict o
 	RRSE = re.search(r'Root relative squared error\s+([\d.]+).*', resultString).group(1)
 
 	table = re.search(r'=== Detailed Accuracy By Class ===\s+([\w\t -]+)\s+([\d.\s?]+).*', resultString)
-	print '\t\t '+table.group(2)
+
+	
 	lines = re.split('\s+',table.group(2))
 	for i,word in enumerate(lines):
 		DATA[i%len(DATA)].append(word)
@@ -44,7 +45,11 @@ def getStat_WEKA(resultString,toList=0): #toList == 1 : list of stat, 0 : dict o
 	dictStat = {'ACC':ACCU,'EPE':EPE,'MAE':MAE,									\
 				'RMS':RMSE,'RAE':RAE,'RRS':RRSE,	\
 				'1PS':map(float,DATA[2]),'2RC':map(float,DATA[3]),'3FM':map(float,DATA[4])}
-	if toList : 
+
+	if verbose :
+		print '\t\t '+table.group(2)
+
+	if convertToList : 
 		return listStat
 	else :
 		return dictStat
@@ -56,14 +61,14 @@ class WekaTrainer(object):
 	W0 = 0 # initial bias weight
 
 	def __init__(self,
-		LEARNING_RATE = 0.3,
-		MOMENTUM = 0.2,
-		EPOCH = 500,
 		N_FOLD = 10,
-		NUMR_NORM = False,
-		ATTR_NORM = True,
+		EPOCH = 500,
+		MOMENTUM = 0.2,
+		LEARNING_RATE = 0.3,
 		HIDDEN1 = 'a',
 		HIDDEN2 = None,
+		NUMR_NORM = False,
+		ATTR_NORM = True,
 		):
 
 		self.trained = False
@@ -88,6 +93,20 @@ class WekaTrainer(object):
 			elif type(HIDDEN) is int:
 				self.hidden_size.append(lambda x,y : HIDDEN)
 
+	def runWEKA(self,arfffile,statOnly=False):
+		start = datetime.datetime.now()
+		WEKA_CMD = " ".join(["java",self.WEKA_PATH,self.WEKA_CLASS,self.WEKA_OPTION,"-t",getPath_arff(arfffile)])
+		if not statOnly : print WEKA_CMD
+		run = subprocess.Popen(WEKA_CMD, stdout=subprocess.PIPE)
+		result = run.communicate()[0]
+
+		if statOnly : return getStat_WEKA(result,True,False)
+		
+		stat = getStat_WEKA(result)
+		stat['TIME'] = datetime.datetime.now() - start
+		print "FINISH WEKA take time %s and Accuracy"%(stat['TIME'],stat['ACC'])
+		# print result
+		return result,stat
 
 	def train(self,arfffile):
 		afile = open(getPath_arff(arfffile),'r')
@@ -101,18 +120,9 @@ class WekaTrainer(object):
 			[map(lambda x:[],range(x)) for x in self.layerconfig[1:]]
 
 		print "START WEKA"
-		start = datetime.datetime.now()
-		WEKA_CMD = " ".join(["java",self.WEKA_PATH,self.WEKA_CLASS,self.WEKA_OPTION,"-t",getPath_arff(arfffile)])
-		print WEKA_CMD
-		run = subprocess.Popen(WEKA_CMD, stdout=subprocess.PIPE)
-		result = run.communicate()[0]
-		lines = result.splitlines()
-		# print result
+		result,stat = self.runWEKA(arfffile)
 		
-		self.wekastat = getStat_WEKA(result)
-		self.wekastat['TIME'] = datetime.datetime.now() - start
-		print "FINISH WEKA take time %s"%(self.wekastat['TIME'])
-		print "FINISH WEKA with Accuracy : %s%%"%(self.wekastat['ACC'])
+		lines = result.splitlines()
 		node_idx = 0
 		getting_attr = False
 		node_sorted = weights[-1] + weights[-2] + (weights[-3] if len(weights) == 4 else [])
@@ -134,6 +144,7 @@ class WekaTrainer(object):
 			if node_idx == len(node_sorted) :
 				break
 
+		self.wekastat = stat
 		self.weights = weights
 		self.trained = True
 
@@ -202,10 +213,10 @@ if __name__ == '__main__':
 
 	# fd_store(filename)
 	# storepick_arff(0, filename)
-	# trainer.train(filename)
-	# trainer.saveTrained(filename)
-	trainer.loadTrained(filename)
-	network = trainer.buildNetwork()
+	trainer.train(filename)
+	trainer.saveTrained(filename)
+	# trainer.loadTrained(filename)
+	# network = trainer.buildNetwork()
 	supervised = arffToData(filename)
 	# print supervised
 
