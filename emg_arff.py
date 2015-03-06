@@ -1,5 +1,5 @@
-from emg_fft import get_supervised_fd
 import re,time,os
+import sys
 import glob
 
 def mkdirs(path):
@@ -41,6 +41,7 @@ def arffToData(filename):
 	return data
 
 def fd_store(filename,ctype=0): #type : 0=one variable, 1=one hot
+	from emg_fft import get_supervised_fd
 	elementFFT = [0,128,4,8,0]
 	rawdata = get_supervised_td(getPath_raw(filename))
 	features = get_supervised_fd(elementFFT, rawdata, False)
@@ -136,7 +137,6 @@ def get_supervised_td(filename):
 	return result
 
 def getFlienameFromPaths(pathList):
-	import sys
 	for path in pathList:
 		if sys.platform.startswith('win'):
 			sign = '\\' # for windows
