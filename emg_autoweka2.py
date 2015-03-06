@@ -6,6 +6,7 @@ import multiprocessing as mp
 import itertools
 import datetime
 import threading
+import sys
 
 class AutoWekaWorker(object):
 	"""docstring for AutoWekaWorker"""
@@ -75,5 +76,15 @@ def multiAutoWEKA(exp,filename,threadAmount,start=0):
 		t.start()
 
 if __name__ == '__main__':
+	thread = 1
+	start = 0
 
-	multiAutoWEKA('Exp1', 'data10000', 3, 3)
+	if len(sys.argv) >= 2 :
+		thread = int(sys.argv[1])
+	if len(sys.argv) >= 3 :
+		start = int(sys.argv[2])
+
+	print 'thread amount = %d'%(thread)
+	print 'start position = %d'%(start)
+
+	multiAutoWEKA('Exp1', 'data10000', thread, start)
