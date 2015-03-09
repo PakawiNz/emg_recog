@@ -24,9 +24,9 @@ def calcMinMax(sample):
 	maxarray = map(np.max, sample)
 	return minarray,maxarray
 
-DATA = [[],[],[],[],[],[],[],[],[]]
 
 def getStat_WEKA(resultString,convertToList=False,verbose=True):
+	DATA = [[],[],[],[],[],[],[],[],[]]
 	ACCU = re.search(r'Correctly Classified Instances\s+(\d+)\s+([\d.]+).*', resultString).group(2)
 	EPE	 = ''
 	MAE	 = re.search(r'Mean absolute error\s+([\d.]+).*', resultString).group(1)
