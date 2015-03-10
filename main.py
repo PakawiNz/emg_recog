@@ -1,7 +1,7 @@
 from emg_fft import FeatureExtractor,current_milli_time
 from emg_serial import SerialManager
 from emg_weka import WekaTrainer
-from main_ui import MainWindow
+from main_ui import MainWindow,action_name
 
 import sys
 import time
@@ -27,6 +27,7 @@ class WorkingThread(QtCore.QObject):
 			'TREND_CHUNK' : 0,
 		}
 		self.trainfile = None
+		self.confusion = [[0]*6 for i in range(6)]
 
 
 	def selectFile(self,filename):
@@ -50,7 +51,7 @@ class WorkingThread(QtCore.QObject):
 		self.network = trainer.buildNetwork()
 		print self.trainfile
 
-		infinite = True
+		infinite = False
 		while infinite :
 			## -------- TERMINATE ---------------------------------------------------------------------
 			if self.terminate :
@@ -71,9 +72,21 @@ class WorkingThread(QtCore.QObject):
 				self.updateFFT.emit(result)
 				action = self.network.activate(result) + 1
 				self.updateAct.emit(action)
+				if self.activity :
+					self.confusion[self.activity[1]][action] += 1
+
 			## -----------------------------------------------------------------------------
 
 		ser.close()
+		
+		matrixStr = "\nConfusion Matrix ::\n----\t"
+		matrixStr += "\t".join(map(str,action_name[1:])) + "\n"
+
+		for arow,action in zip(self.confusion[1:],action_name[1:]) :
+			matrixStr += "%s\t"%(action)
+			matrixStr += "\t\t".join(map(str,arow[1:])) + "\n"
+
+		print matrixStr
 
 	def train(self,sec=1):
 		return
