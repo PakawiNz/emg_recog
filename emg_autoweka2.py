@@ -1,4 +1,4 @@
-from emg_arff import getPath_stat
+from emg_arff import mkdirs
 from emg_weka import WekaTrainer,isLinux
 
 from random import shuffle
@@ -8,6 +8,11 @@ import datetime
 import threading
 import sys,signal,os
 
+POS_INF = 1000000
+dropboxPath = '/home/pakawinz/Dropbox/'
+pcname = 'Acer'
+outputrange = '0-1000'
+
 class AutoWekaWorker(object):
 	"""docstring for AutoWekaWorker"""
 	def __init__(self,exp,filename,cartesian,start,end,threadAmount):
@@ -15,6 +20,7 @@ class AutoWekaWorker(object):
 		self.exp = exp
 		self.filename = filename
 		self.cartesian = cartesian[start:]
+		self.start = start
 		self.count = start
 		self.end = end
 		self.lock = threading.Lock()
@@ -26,13 +32,21 @@ class AutoWekaWorker(object):
 			raise Exception('invalid start value')
 		if end < 0 :
 			raise Exception('invalid end value')
+		afile = open(self.getPath_dropbox(self.exp,self.filename,note=''),'a+')
+		afile.close()
+
+	def getPath_dropbox(self,exp,filename,note=0):
+		path = '@Senior Project/03 Final/Stat/Stat-%s-%s.csv'%(outputrange,pcname)
+		path = os.path.join(dropboxPath,path)
+		mkdirs(path)
+		return path
 
 	def flush(self):
 		self.writeout(force=True)
 
 	def writeout(self,count=-1,csvdata='',force=False):
 		if self.nextwrite == count :
-			afile = open(getPath_stat(self.exp,self.filename,note=''),'a+')
+			afile = open(self.getPath_dropbox(self.exp,self.filename,note=''),'a+')
 			afile.write(csvdata+'\n')
 			afile.close()
 			print csvdata
@@ -96,7 +110,17 @@ def multiAutoWEKA(exp,filename,threadAmount,start=0,end=100000):
 	hidden0 		= [4,5,6,7,8,9,10,12,14,16,20,24,30,36]
 	hidden1 		= [None,5,7,9,12,15,18]
 
+	print "WARNING : In order to exit, you should (type 'e') instead of (CTRL+C), unless some result may lost"
+	if isLinux :
+		print "WARNING : (Linux) You should kill the java process by yourself!! after exit with (type 'e')"
+
 	cartesian = createCartesian(epoch, momentum, learning_rate, hidden0, hidden1)
+	if end == POS_INF :
+		end = len(cartesian)-1
+
+	print 'thread amount = %d'%(thread)
+	print 'start position = %d'%(start)
+	print 'end position = %d'%(end)
 
 	worker = AutoWekaWorker(exp, filename, cartesian, start, end, threadAmount)
 	for i in range(threadAmount) :
@@ -118,9 +142,10 @@ def multiAutoWEKA(exp,filename,threadAmount,start=0,end=100000):
 		print "Automation is on progress (type 'e' to force exit)"
 
 if __name__ == '__main__':
+
 	thread = 1
 	start = 0
-	end = 100000
+	end = POS_INF
 
 	if len(sys.argv) >= 2 :
 		thread = int(sys.argv[1])
@@ -128,13 +153,5 @@ if __name__ == '__main__':
 		start = int(sys.argv[2])
 	if len(sys.argv) >= 4 :
 		end = int(sys.argv[3])
-
-	print "WARNING : In order to exit, you should (type 'e') instead of (CTRL+C), unless some result may lost"
-	if isLinux :
-		print "WARNING : (Linux) You should kill the java process by yourself!! after exit with (type 'e')"
-
-	print 'thread amount = %d'%(thread)
-	print 'start position = %d'%(start)
-	print 'end position = %d'%(start)
 
 	multiAutoWEKA('Exp2', 'data10000', thread, start, end)
