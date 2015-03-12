@@ -69,7 +69,7 @@ class WekaTrainer(object):
 		MOMENTUM = 0.2,
 		LEARNING_RATE = 0.3,
 		HIDDEN1 = 'a',
-		HIDDEN2 = None,
+		HIDDEN2 = 0,
 		NUMR_NORM = False,
 		ATTR_NORM = True,
 		):

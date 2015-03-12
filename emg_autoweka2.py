@@ -108,7 +108,7 @@ def multiAutoWEKA(exp,filename,threadAmount,start=0,end=100000):
 	momentum 		= [0.05,0.1,0.2,0.4,0.8,1.6,3.2]
 	learning_rate 	= [0.05,0.1,0.2,0.4,0.8,1.6,3.2]
 	hidden0 		= [4,5,6,7,8,9,10,12,14,16,20,24,30,36]
-	hidden1 		= [None,5,7,9,12,15,18]
+	hidden1 		= [0,5,7,9,12,15,18]
 
 	print "WARNING : In order to exit, you should (type 'e') instead of (CTRL+C), unless some result may lost"
 	if isLinux :
