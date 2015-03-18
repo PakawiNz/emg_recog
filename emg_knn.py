@@ -1,9 +1,8 @@
 import random
 import math
 import operator
-from emg_arff import getPath_arff,arffToData
-from emg_fft import current_milli_time
-from emg_utils import createConfusionMatrix,statConfusionMatrix
+from emg_arff import arffToData
+from emg_utils import createConfusionMatrix,statConfusionMatrix,current_milli_time
  
 class KNN(object):
 	@staticmethod

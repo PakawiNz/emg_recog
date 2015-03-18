@@ -1,17 +1,14 @@
-from emg_arff import mkdirs
+from emg_utils import getPath_stat
 from emg_weka import WekaTrainer,isLinux
+from emg_utils import current_milli_time
 
 from random import shuffle
 import multiprocessing as mp
 import itertools
-import datetime
 import threading
 import sys,signal,os
 
 POS_INF = 1000000
-dropboxPath = '/home/pakawinz/Dropbox/'
-pcname = 'Acer'
-outputrange = '0-1000'
 
 class AutoWekaWorker(object):
 	"""docstring for AutoWekaWorker"""
@@ -28,25 +25,23 @@ class AutoWekaWorker(object):
 		self.buffer = {}
 		self.threadAmount = threadAmount
 		self.processStore = []
+		self.statpath = getPath_stat(self.exp,self.filename)
+		# self.statpath = self.getPath_dropbox(self.exp,self.filename,note='')
+
 		if start < 0 :
 			raise Exception('invalid start value')
 		if end < 0 :
 			raise Exception('invalid end value')
-		afile = open(self.getPath_dropbox(self.exp,self.filename,note=''),'a+')
-		afile.close()
 
-	def getPath_dropbox(self,exp,filename,note=0):
-		path = '@Senior Project/03 Final/Stat/Stat-%s-%s.csv'%(outputrange,pcname)
-		path = os.path.join(dropboxPath,path)
-		mkdirs(path)
-		return path
+		afile = open(self.statpath,'a+')
+		afile.close()
 
 	def flush(self):
 		self.writeout(force=True)
 
 	def writeout(self,count=-1,csvdata='',force=False):
 		if self.nextwrite == count :
-			afile = open(self.getPath_dropbox(self.exp,self.filename,note=''),'a+')
+			afile = open(self.statpath,'a+')
 			afile.write(csvdata+'\n')
 			afile.close()
 			print csvdata
@@ -79,9 +74,9 @@ class AutoWekaWorker(object):
 				self.lock.release()
 
 			trainer = WekaTrainer(**var)
-			start = datetime.datetime.now()
+			start = current_milli_time()
 			stat = trainer.runWEKA(self.filename,True,self.processStore)
-			duration = datetime.datetime.now()-start
+			duration = current_milli_time()-start
 			order = [count,var['EPOCH'],var['LEARNING_RATE'],var['MOMENTUM'],var['HIDDEN1'],var['HIDDEN2'],]
 			csvdata = ",".join(map(str,list(order)+[duration]+stat+[trainer.WEKA_OPTION]))
 
@@ -110,10 +105,10 @@ def multiAutoWEKA(exp,filename,threadAmount,start=0,end=100000):
 	# hidden0 		= [4,5,6,7,8,9,10,12,14,16,20,24,30,36]
 	# hidden1 		= [0,5,7,9,12,15,18]
 	epoch 			= [50,100,200,300,500,700,900,1200,1500,1800,2400,3000]
-	momentum 		= [0.05]
 	learning_rate 	= [0.05]
-	hidden0 		= [12,18]
-	hidden1 		= [0,8]
+	momentum 		= [0.4]
+	hidden0 		= [16]
+	hidden1 		= [0]
 
 	print "WARNING : In order to exit, you should (type 'e') instead of (CTRL+C), unless some result may lost"
 	if isLinux :
@@ -159,4 +154,4 @@ if __name__ == '__main__':
 	if len(sys.argv) >= 4 :
 		end = int(sys.argv[3])
 
-	multiAutoWEKA('Exp2', 'data10000', thread, start, end)
+	multiAutoWEKA('Exp3', 'data10000', thread, start, end)

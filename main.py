@@ -1,6 +1,7 @@
-from emg_fft import FeatureExtractor,current_milli_time
+from emg_fft import FeatureExtractor
 from emg_serial import SerialManager
 from emg_weka import WekaTrainer
+from emg_utils import current_milli_time
 from main_ui import MainWindow,action_name
 
 import sys

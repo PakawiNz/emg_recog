@@ -1,5 +1,5 @@
 from emg_fft import FeatureExtractor
-from emg_arff import getPath_train
+from emg_utils import getPath_train
 import glob,re,os
 import threading
 

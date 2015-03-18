@@ -1,7 +1,7 @@
 import numpy as np
 import threading
 import math
-import time
+from emg_utils import current_milli_time
 
 UI_RANGE = 500
 DATA_RANGE = 1024
@@ -116,7 +116,6 @@ class FeatureExtractor(object) :
 
 FT = FeatureExtractor
 
-current_milli_time = lambda: int(round(time.time() * 1000))
 def get_supervised_fd(config,supervised_td,profile=True):
 	extr = FeatureExtractor(*config)
 

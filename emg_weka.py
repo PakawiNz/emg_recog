@@ -1,4 +1,5 @@
-from emg_arff import getPath_arff,getPath_train,fd_store,storepick_arff,arffToData
+from emg_arff import fd_store,storepick_arff,arffToData
+from emg_utils import getPath_arff,getPath_train
 import re, subprocess, sys, os
 import datetime
 import subprocess

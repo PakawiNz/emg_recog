@@ -1,5 +1,6 @@
 from emg_serial import SerialManager
-from emg_arff import fd_store,storepick_arff,getPath_raw
+from emg_arff import fd_store,storepick_arff
+from emg_utils import getPath_raw
 from emg_weka import WekaTrainer
 
 import sys

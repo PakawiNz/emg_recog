@@ -1,4 +1,4 @@
-from emg_arff import getPath_arff,getPath_csv,getPath_stat
+from emg_utils import getPath_arff,getPath_csv,getPath_stat
 from emg_weka import getWekaPath,getStat_WEKA
 import itertools
 import re,os

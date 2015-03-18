@@ -57,8 +57,10 @@ def preparePoints(result,colorMode=0):
 	size = np.empty((len(result)+60))
 	color = np.empty((len(result)+60, 4))
 
-	xset = map(lambda x : x.hidd0,result)
-	yset = map(lambda x : x.hidd1,result)
+	result = filter(lambda x : x.hidd1 == 0, result)
+	xset = map(lambda x : x.learn,result)
+	# yset = map(lambda x : x.learn,result)
+	yset = map(lambda x : x.time,result)
 	zset = map(lambda x : x.accu,result)
 
 	minx,maxx = min(xset),max(xset)

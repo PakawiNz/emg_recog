@@ -1,36 +1,5 @@
-import re,time,os
-import sys
-import glob
-
-def mkdirs(path):
-	dirname = os.path.dirname(path)
-	if not os.path.exists(dirname):
-	    os.makedirs(dirname)
-
-def getPath_raw(filename):
-	path = '0raw/%s.txt'%(filename)
-	mkdirs(path)
-	return path
-
-def getPath_csv(filename):
-	path = '1store/%s.csv'%(filename)
-	mkdirs(path)
-	return path
-
-def getPath_arff(filename):
-	path = '2arff/%s.arff'%(filename)
-	mkdirs(path)
-	return path
-
-def getPath_stat(exp,filename,note=0):
-	path = '3stat/%s/%s-%s-%s.csv'%(exp,filename,exp,note)
-	mkdirs(path)
-	return path
-
-def getPath_train(filename):
-	path = '4train/%s.emg'%(filename)
-	mkdirs(path)
-	return path
+from emg_utils import getPath_arff,getPath_csv,getPath_raw
+import re,sys,glob
 
 def arffToData(filename,inline=False):
 	arff = open(getPath_arff(filename),"r").read()
