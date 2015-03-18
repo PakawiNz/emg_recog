@@ -146,8 +146,6 @@ def multiAutoWEKA(exp,filename,threadAmount,start=0,end=100000):
 	print 'start position = %d'%(start)
 	print 'end position = %d'%(end)
 
-	exit()
-
 	worker = AutoWekaWorker(exp, filename, cartesian, start, end, threadAmount)
 	for i in range(threadAmount) :
 		t = threading.Thread(target=worker.work,name="awk%d"%i)
