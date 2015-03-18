@@ -32,12 +32,14 @@ def getPath_train(filename):
 	mkdirs(path)
 	return path
 
-def arffToData(filename):
+def arffToData(filename,inline=False):
 	arff = open(getPath_arff(filename),"r").read()
 	data = re.search(r'@data\s+([\d.,\s]+).*', arff).group(1).splitlines()
 	data = map(lambda x : x.split(','),data)
 	data = map(lambda x : map(float, x),data)
-	data = map(lambda x : (x[:-1],x[-1]), data)
+	if not inline :
+		data = map(lambda x : (x[:-1],x[-1]), data)
+
 	return data
 
 def fd_store(filename,ctype=0): #type : 0=one variable, 1=one hot

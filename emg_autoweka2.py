@@ -104,11 +104,16 @@ def createCartesian(epoch,momentum,learning_rate,hidden0,hidden1):
 
 def multiAutoWEKA(exp,filename,threadAmount,start=0,end=100000):
 	# epoch 			= [500,1000,2000,4000]
-	epoch 			= [500]
-	momentum 		= [0.05,0.1,0.2,0.4,0.8,1.6,3.2]
-	learning_rate 	= [0.05,0.1,0.2,0.4,0.8,1.6,3.2]
-	hidden0 		= [4,5,6,7,8,9,10,12,14,16,20,24,30,36]
-	hidden1 		= [0,5,7,9,12,15,18]
+	# epoch 			= [500]
+	# momentum 		= [0.05,0.1,0.2,0.4,0.8,1.6,3.2]
+	# learning_rate 	= [0.05,0.1,0.2,0.4,0.8,1.6,3.2]
+	# hidden0 		= [4,5,6,7,8,9,10,12,14,16,20,24,30,36]
+	# hidden1 		= [0,5,7,9,12,15,18]
+	epoch 			= [50,100,200,300,500,700,900,1200,1500,1800,2400,3000]
+	momentum 		= [0.05]
+	learning_rate 	= [0.05]
+	hidden0 		= [12,18]
+	hidden1 		= [0,8]
 
 	print "WARNING : In order to exit, you should (type 'e') instead of (CTRL+C), unless some result may lost"
 	if isLinux :
