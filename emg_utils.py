@@ -2,45 +2,47 @@ import time
 current_milli_time = lambda: int(round(time.time() * 1000))
 
 import os
+filepath = os.path.dirname(os.path.abspath(__file__))
+os.chdir(filepath)
 def mkdirs(path):
 	dirname = os.path.dirname(path)
 	if not os.path.exists(dirname):
 	    os.makedirs(dirname)
 
 def getPath_raw(filename):
-	path = '0raw/%s.txt'%(filename)
+	path = 'x_data/0raw/%s.txt'%(filename)
 	mkdirs(path)
 	return path
 
 def getPath_csv(filename):
-	path = '1store/%s.csv'%(filename)
+	path = 'x_data/1store/%s.csv'%(filename)
 	mkdirs(path)
 	return path
 
 def getPath_arff(filename):
-	path = '2arff/%s.arff'%(filename)
+	path = 'x_data/2arff/%s.arff'%(filename)
 	mkdirs(path)
 	return path
 
 def getPath_stat(exp,filename,note=0):
-	path = '3stat/%s/%s-%s-%s.csv'%(exp,filename,exp,note)
+	path = 'x_data/3stat/%s/%s-%s-%s.csv'%(exp,filename,exp,note)
 	mkdirs(path)
 	return path
 
 def getPath_train(filename):
-	path = '4train/%s.emg'%(filename)
+	path = 'x_data/4train/%s.emg'%(filename)
 	mkdirs(path)
 	return path
 
-dropboxPath = '/home/pakawinz/Dropbox/'
-pcname = 'Acer'
-outputrange = '0-1000'
+# dropboxPath = '/home/pakawinz/Dropbox/'
+# pcname = 'Acer'
+# outputrange = '0-1000'
 
-def getPath_dropbox(exp,filename,note=0):
-	path = '@Senior Project/03 Final/Stat/Stat-%s-%s.csv'%(outputrange,pcname)
-	path = os.path.join(dropboxPath,path)
-	mkdirs(path)
-	return path
+# def getPath_dropbox(exp,filename,note=0):
+# 	path = '@Senior Project/03 Final/Stat/Stat-%s-%s.csv'%(outputrange,pcname)
+# 	path = os.path.join(dropboxPath,path)
+# 	mkdirs(path)
+# 	return path
 
 def createConfusionMatrix(trainset):
 	ansset = set()

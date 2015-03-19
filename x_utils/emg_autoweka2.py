@@ -149,13 +149,14 @@ def multiAutoWEKA(exp,filename,threadAmount,start=0,end=100000):
 	print 'start position = %d'%(start)
 	print 'end position = %d'%(end)
 
+	worker = AutoWekaWorker(exp, filename, cartesian, start, end, threadAmount)
+
 	try:
 		raw_input("Type anything to start... ")
 	except Exception, e:
 		print 'You should use terminal to run this program.'
 		return
 
-	worker = AutoWekaWorker(exp, filename, cartesian, start, end, threadAmount)
 	for i in range(threadAmount) :
 		t = threading.Thread(target=worker.work,name="awk%d"%i)
 		t.daemon = True
