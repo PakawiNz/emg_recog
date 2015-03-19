@@ -1,3 +1,6 @@
 *.pyc
-*.java
-*/*
+0raw/
+1store/
+2arff/
+3stat/
+4train/

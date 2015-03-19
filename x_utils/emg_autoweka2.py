@@ -1,3 +1,4 @@
+import importer
 from emg_utils import getPath_stat
 from emg_weka import WekaTrainer,isLinux
 from emg_utils import current_milli_time
@@ -62,9 +63,6 @@ class AutoWekaWorker(object):
 			count = self.count
 			if count > self.end :
 				self.writeout()
-				self.threadAmount -= 1
-				if self.threadAmount == 0 :
-					print "\n\n >>>>>> AUTOMATION FINISHED <<<<<<"
 				self.lock.release()
 				break
 			else :
@@ -84,6 +82,11 @@ class AutoWekaWorker(object):
 			self.writeout(count,csvdata)
 			self.lock.release()
 
+		self.lock.acquire()
+		self.threadAmount -= 1
+		if self.threadAmount == 0 :
+			print "\n\n >>>>>> AUTOMATION FINISHED <<<<<<"
+		self.lock.release()
 
 def runEpoch(epoch):
 	config = [
@@ -145,6 +148,12 @@ def multiAutoWEKA(exp,filename,threadAmount,start=0,end=100000):
 	print 'thread amount = %d'%(thread)
 	print 'start position = %d'%(start)
 	print 'end position = %d'%(end)
+
+	try:
+		raw_input("Type anything to start... ")
+	except Exception, e:
+		print 'You should use terminal to run this program.'
+		return
 
 	worker = AutoWekaWorker(exp, filename, cartesian, start, end, threadAmount)
 	for i in range(threadAmount) :
