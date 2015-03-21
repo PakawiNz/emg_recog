@@ -94,8 +94,8 @@ class WekaTrainer(object):
 				self.hidden_size.append(lambda x,y : y)
 			elif HIDDEN == 't' :
 				self.hidden_size.append(lambda x,y : x+y)
-			elif type(HIDDEN) is int:
-				self.hidden_size.append(lambda x,y : HIDDEN)
+			elif type(HIDDEN) is int and HIDDEN > 0 :
+				self.hidden_size.append(lambda x,y,z=HIDDEN : z)
 
 	def runWEKA(self,arfffile,statOnly=False,processStore=[]):
 		start = datetime.datetime.now()
@@ -109,7 +109,7 @@ class WekaTrainer(object):
 		
 		stat = getStat_WEKA(result)
 		stat['TIME'] = datetime.datetime.now() - start
-		print "FINISH WEKA take time %s and Accuracy"%(stat['TIME'],stat['ACC'])
+		print "FINISH WEKA take time = %s with sensitivity = %s"%(stat['TIME'],stat['ACC'])
 		# print result
 		return result,stat
 
@@ -212,13 +212,20 @@ class WekaTrainer(object):
 
 if __name__ == '__main__':
 
-	trainer = WekaTrainer()
-	filename = "150305"
+	trainer = WekaTrainer(
+		N_FOLD = 10,
+		EPOCH = 500,
+		MOMENTUM = 3.2,
+		LEARNING_RATE = 3.2,
+		HIDDEN1 = 20,
+		HIDDEN2 = 0,
+		NUMR_NORM = False,
+		ATTR_NORM = True,)
 
-	# fd_store(filename)
-	# storepick_arff(0, filename)
-	# trainer.train(filename)
-	# trainer.saveTrained(filename)
+	filename = "data10000"
+
+	trainer.train(filename)
+	trainer.saveTrained(filename)
 	# trainer.loadTrained(filename)
 	# network = trainer.buildNetwork()
 	# supervised = arffToData(filename)
