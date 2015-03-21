@@ -52,7 +52,7 @@ class WorkingThread(QtCore.QObject):
 		self.network = trainer.buildNetwork()
 		print self.trainfile
 
-		infinite = False
+		infinite = True
 		while infinite :
 			## -------- TERMINATE ---------------------------------------------------------------------
 			if self.terminate :

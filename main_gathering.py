@@ -56,7 +56,16 @@ class WorkingThread(QtCore.QObject):
 	def convert(self):
 		fd_store(self.filename)
 		storepick_arff(0, self.filename)
-		trainer = WekaTrainer()
+		
+		trainer = WekaTrainer(
+			N_FOLD = 10,
+			EPOCH = 500,
+			MOMENTUM = 3.2,
+			LEARNING_RATE = 3.2,
+			HIDDEN1 = 20,
+			HIDDEN2 = 0,
+			NUMR_NORM = False,
+			ATTR_NORM = True,)
 		trainer.train(self.filename)
 		trainer.saveTrained(self.filename)
 
@@ -154,6 +163,8 @@ class MainWindow(QtGui.QMainWindow):
 if __name__ == '__main__':
 	app = QtGui.QApplication(sys.argv)
 	work = WorkingThread()
+	# work.filename = "150320"
+	work.filename = "champ_CORE_00"
 	MainWindow(work).show()
 	app.exec_()
 	work.terminate = True

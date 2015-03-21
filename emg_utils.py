@@ -55,13 +55,25 @@ def createConfusionMatrix(trainset):
 
 	return confusionMatrix
 
-def printConfusionMatric(confusionMatrix,delimit='\t'):
-	matrixStr = "\nConfusion Matrix ::\n---" + delimit
-	matrixStr += delimit.join([str(key) for key in confusionMatrix.iterkeys()])
+def printConfusionMatric(confusionMatrix,delimit=None):
+	matrixStr = "\nConfusion Matrix ::\n"
+	header = ['-'] + [str(key) for key in confusionMatrix.iterkeys()]
+	rows = [header]
+
 	for ans,actSet in confusionMatrix.iteritems() :
-		matrixStr += "\n%s"%(ans)
+		row = [str(ans)]
 		for act,value in actSet.iteritems():
-			matrixStr += delimit + "%d"%(actSet[act])
+			row.append("%d"%(value))
+		rows.append(row)
+
+	for row in rows :
+		for dat in row :
+			if delimit == None :
+				matrixStr += '{: <10}'.format(dat)
+			else :
+				matrixStr += dat + delimit
+
+		matrixStr += '\n'
 
 	print matrixStr
 
@@ -99,3 +111,8 @@ def statConfusionMatrix(confusionMatrix,asList=False):
 		return resultList
 	else :
 		return result
+
+if __name__ == '__main__':
+	trainset = [[1],[2],[3],[4],[5],[6],[7]]
+	conf = createConfusionMatrix(trainset)
+	printConfusionMatric(conf)
