@@ -3,8 +3,8 @@ import threading
 import math
 from emg_utils import current_milli_time
 
-UI_RANGE = 500
 DATA_RANGE = 1024
+OUTPUT_RANGE = 800
 BUFFER_SIZE = 4
 FFT_NORM_CORRECTION = 0.54
 
@@ -105,6 +105,9 @@ class FeatureExtractor(object) :
 				self.tempResult.pop()
 			self.tempResult.append(result)
 
+		if output :
+			output = map(lambda x : OUTPUT_RANGE if x > OUTPUT_RANGE else 0 if x < 0 else x, output)
+
 		return output
 
 	def norm(self,a):
@@ -112,12 +115,12 @@ class FeatureExtractor(object) :
 
 	def linefit(self,data):
 		slope = np.polyfit(data,self.TREND_GROUPING,1)[0]
-		return np.sign(slope) * np.log10(np.abs(slope)) * UI_RANGE/5 + UI_RANGE/2
+		return np.sign(slope) * np.log10(np.abs(slope)) * OUTPUT_RANGE/5 + OUTPUT_RANGE/2
 
 FT = FeatureExtractor
 
 def get_supervised_fd(config,supervised_td,profile=True):
-	extr = FeatureExtractor(*config)
+	extr = FeatureExtractor(**config)
 
 	calctime = [0,0]
 	features = []

@@ -2,6 +2,7 @@ from emg_serial import SerialManager
 from emg_arff import fd_store,storepick_arff
 from emg_utils import getPath_raw
 from emg_weka import WekaTrainer
+from config import FEATURE_CONFIG,TRAINER_CONFIG
 
 import sys
 import datetime
@@ -33,11 +34,12 @@ class WorkingThread(QtCore.QObject):
 			data = ser.recieve().ch1
 			self.updateRaw.emit(data)
 
-			if self.activity :
+			activity = self.activity
+			if activity :
 				count += 1
 				self.updateTime.emit("%d"%(count))
-				if lastActivity != self.activity[1] :
-					lastActivity = self.activity[1]
+				if lastActivity != activity[1] :
+					lastActivity = activity[1]
 					mem.write("%.03f,%s "%(data,lastActivity))
 				else :
 					mem.write("%.03f "%(data))
@@ -54,18 +56,12 @@ class WorkingThread(QtCore.QObject):
 		self.datastore()
 
 	def convert(self):
-		fd_store(self.filename)
+		print "START CONVERSION"
+		fd_store(self.filename,fftconfig=FEATURE_CONFIG)
 		storepick_arff(0, self.filename)
 		
-		trainer = WekaTrainer(
-			N_FOLD = 10,
-			EPOCH = 500,
-			MOMENTUM = 3.2,
-			LEARNING_RATE = 3.2,
-			HIDDEN1 = 20,
-			HIDDEN2 = 0,
-			NUMR_NORM = False,
-			ATTR_NORM = True,)
+		print "START TRAINING"
+		trainer = WekaTrainer(*TRAINER_CONFIG)
 		trainer.train(self.filename)
 		trainer.saveTrained(self.filename)
 
@@ -164,7 +160,7 @@ if __name__ == '__main__':
 	app = QtGui.QApplication(sys.argv)
 	work = WorkingThread()
 	# work.filename = "150320"
-	work.filename = "champ_CORE_00"
+	work.filename = "champ_CORE_02"
 	MainWindow(work).show()
 	app.exec_()
 	work.terminate = True

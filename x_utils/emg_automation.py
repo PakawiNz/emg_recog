@@ -67,7 +67,15 @@ class Automation(QtCore.QObject) :
 				if self.terminate :
 					break
 
-				features,t_fill,t_calc = get_supervised_fd(elementFFT,rawdata)
+				fftconfig = {
+					'OUTPUT_TYPE' : elementFFT[0],
+					'CALC_SIZE' : elementFFT[1],
+					'SLIDING_SIZE' : elementFFT[2],
+					'FREQ_DOMAIN' : elementFFT[3],
+					'TREND_CHUNK' : elementFFT[4],
+				}
+
+				features,t_fill,t_calc = get_supervised_fd(fftconfig,rawdata)
 
 				recog = CustomRecognition(elementFFT[3],*elementANN)
 				map(lambda x : recog.addSample(*x),features)
@@ -94,7 +102,14 @@ class Automation(QtCore.QObject) :
 
 
 	def compare_ann(self,feature=None):
-		elementFFT = [0,128,4,8,0]
+		elementFFT = {
+			'OUTPUT_TYPE' : 0,
+			'CALC_SIZE' : 128,
+			'SLIDING_SIZE' : 4,
+			'FREQ_DOMAIN' : 8,
+			'TREND_CHUNK' : 0,
+		}
+
 		rawdata = get_supervised_td('result/recog 150206.txt')
 		if not feature :
 			features = get_supervised_fd(elementFFT, rawdata, profile=False)

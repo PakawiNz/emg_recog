@@ -11,11 +11,10 @@ def arffToData(filename,inline=False):
 
 	return data
 
-def fd_store(filename,ctype=0): #type : 0=one variable, 1=one hot
+def fd_store(filename,ctype=0,fftconfig={}): #type : 0=one variable, 1=one hot
 	from emg_fft import get_supervised_fd
-	elementFFT = [0,128,4,8,0]
 	rawdata = get_supervised_td(getPath_raw(filename))
-	features = get_supervised_fd(elementFFT, rawdata, False)
+	features = get_supervised_fd(fftconfig, rawdata, profile=False)
 
 	outfile = getPath_csv(filename)
 	store = open(outfile,"w")

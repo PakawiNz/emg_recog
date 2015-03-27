@@ -1,4 +1,4 @@
-from emg_fft import FeatureExtractor
+from emg_fft import FeatureExtractor,OUTPUT_RANGE
 from emg_utils import getPath_train
 import glob,re,os
 import threading
@@ -44,7 +44,7 @@ class MainWindow(QtGui.QMainWindow):
 		self.plotArea = widget
 
 		widget = pg.PlotWidget(lockAspect=True, enableMouse=False, enableMenu=False)
-		widget.setYRange(0,500)
+		widget.setYRange(0,OUTPUT_RANGE)
 		widget.keyPressEvent = self.keyPressEvent
 		self.slave.updateFFT.connect(self.updateFFT)
 		self.fftArea = widget
@@ -116,6 +116,10 @@ class MainWindow(QtGui.QMainWindow):
 		self.actLabel = QtGui.QLabel('None')
 		self.slave.updateAct.connect(lambda x : self.actLabel.setText("  %s"%(action_name[x])))
 
+		widget = QtGui.QCheckBox('Control')
+		widget.stateChanged.connect(self.btnControlFN)
+		self.btnControl = widget
+
 		layout.setRowStretch(0, 100)
 		layout.addWidget(QtGui.QLabel('') 							, 0,0)
 		# layout.addWidget(QtGui.QLabel('Calculation Chunk Size') 	, 1,0)
@@ -128,6 +132,7 @@ class MainWindow(QtGui.QMainWindow):
 		# layout.addWidget(self.trendSize								, 8,0)
 		# layout.addWidget(QtGui.QLabel('Output Type') 				, 9,0)
 		# layout.addWidget(self.outType								, 10,0)
+		layout.addWidget(self.btnControl							, 10,0)
 		layout.addWidget(QtGui.QLabel('Trained File') 				, 11,0)
 		layout.addWidget(self.trainedFile							, 12,0)
 		layout.addWidget(QtGui.QLabel('Calculation Time')			, 13,0)
@@ -156,6 +161,10 @@ class MainWindow(QtGui.QMainWindow):
 	@QtCore.pyqtSlot()
 	def btnPauseFN(self):
 		self.slave.paused = self.btnPause.isChecked()
+
+	@QtCore.pyqtSlot()
+	def btnControlFN(self):
+		self.slave.control = self.btnControl.isChecked()
 
 	@QtCore.pyqtSlot()
 	def btnTerminateFN(self):
