@@ -28,14 +28,17 @@ def calcMinMax(sample):
 
 def getStat_WEKA(resultString,convertToList=False,verbose=True):
 	DATA = [[],[],[],[],[],[],[],[],[]]
-	ACCU = re.search(r'Correctly Classified Instances\s+(\d+)\s+([\d.]+).*', resultString).group(2)
-	EPE	 = ''
-	MAE	 = re.search(r'Mean absolute error\s+([\d.]+).*', resultString).group(1)
-	RMSE = re.search(r'Root mean squared error\s+([\d.]+).*', resultString).group(1)
-	RAE	 = re.search(r'Relative absolute error\s+([\d.]+).*', resultString).group(1)
-	RRSE = re.search(r'Root relative squared error\s+([\d.]+).*', resultString).group(1)
+	resultStat = resultString.split('=== Stratified cross-validation ===')[-1]
 
-	table = re.search(r'=== Detailed Accuracy By Class ===\s+([\w\t -]+)\s+([\d.\s?]+).*', resultString)
+	TIME = re.search(r'Time taken to build model:\s+([\d.]+)\s+seconds', resultString).group(1)
+	ACCU = re.search(r'Correctly Classified Instances\s+(\d+)\s+([\d.]+).*', resultStat).group(2)
+	EPE	 = ''
+	MAE	 = re.search(r'Mean absolute error\s+([\d.]+).*', resultStat).group(1)
+	RMSE = re.search(r'Root mean squared error\s+([\d.]+).*', resultStat).group(1)
+	RAE	 = re.search(r'Relative absolute error\s+([\d.]+).*', resultStat).group(1)
+	RRSE = re.search(r'Root relative squared error\s+([\d.]+).*', resultStat).group(1)
+
+	table = re.search(r'=== Detailed Accuracy By Class ===\s+([\w\t -]+)\s+([\d.\s?]+).*', resultStat)
 
 	
 	lines = re.split('\s+',table.group(2))
@@ -46,8 +49,7 @@ def getStat_WEKA(resultString,convertToList=False,verbose=True):
 			+[RMSE]+[RAE]+[RRSE]			\
 			+DATA[2]+DATA[3]+DATA[4]
 
-	dictStat = {'ACC':ACCU,'EPE':EPE,'MAE':MAE,									\
-				'RMS':RMSE,'RAE':RAE,'RRS':RRSE,	\
+	dictStat = {'ACC':ACCU,'EPE':EPE,'MAE':MAE,'RMS':RMSE,'RAE':RAE,'RRS':RRSE,'TIME':TIME,
 				'1PS':map(float,DATA[2]),'2RC':map(float,DATA[3]),'3FM':map(float,DATA[4])}
 
 	if verbose :
@@ -78,7 +80,7 @@ class WekaTrainer(object):
 		self.trained = False
 		self.WEKA_PATH = getWekaPath()
 		self.WEKA_CLASS = 'weka.classifiers.functions.MultilayerPerceptron'
-		self.WEKA_OPTION = ' -L %.2f -M %.2f -N %d -x %d -V 0 -S 0 -E 20 -H %s%s -B -R -v %s%s'%(
+		self.WEKA_OPTION = ' -L %.2f -M %.2f -N %d -x %d -V 0 -S 0 -E 20 -H %s%s -B -R %s%s'%(
 				LEARNING_RATE,MOMENTUM,EPOCH,N_FOLD,HIDDEN1,
 				',%s'%HIDDEN2 if HIDDEN2 else '',
 				'-C' if not NUMR_NORM else '',
@@ -98,7 +100,6 @@ class WekaTrainer(object):
 				self.hidden_size.append(lambda x,y,z=HIDDEN : z)
 
 	def runWEKA(self,arfffile,statOnly=False,processStore=[]):
-		start = datetime.datetime.now()
 		WEKA_CMD = " ".join(["java",self.WEKA_PATH,self.WEKA_CLASS,self.WEKA_OPTION,"-t",getPath_arff(arfffile)])
 		if not statOnly : print WEKA_CMD
 		run = subprocess.Popen(WEKA_CMD, stdout=subprocess.PIPE, shell=isLinux)
@@ -108,8 +109,7 @@ class WekaTrainer(object):
 		if statOnly : return getStat_WEKA(result,True,False)
 		
 		stat = getStat_WEKA(result)
-		stat['TIME'] = datetime.datetime.now() - start
-		print "FINISH WEKA take time = %s with sensitivity = %s"%(stat['TIME'],stat['ACC'])
+		print "FINISH WEKA take time = %sseconds with sensitivity = %s%%"%(stat['TIME'],stat['ACC'])
 		# print result
 		return result,stat
 
@@ -189,6 +189,7 @@ class WekaTrainer(object):
 			afile.write("%s\t%s\n"%(key, self.wekastat[key]))
 
 		afile.close()
+		print "File saved at %s"%(os.path.abspath(getPath_train(filename)))
 
 	def getLayerConfig(self):
 		if not self.trained :
@@ -212,20 +213,32 @@ class WekaTrainer(object):
 
 if __name__ == '__main__':
 
-	trainer = WekaTrainer(
-		N_FOLD = 10,
-		EPOCH = 500,
-		MOMENTUM = 3.2,
-		LEARNING_RATE = 3.2,
-		HIDDEN1 = 20,
-		HIDDEN2 = 0,
-		NUMR_NORM = False,
-		ATTR_NORM = True,)
+	from config import TRAINER_CONFIG
 
-	filename = "data10000"
+	trainer = WekaTrainer(**TRAINER_CONFIG)
 
+	# result,stat = trainer.runWEKA(filename)
+
+	filename = "150320"
 	trainer.train(filename)
 	trainer.saveTrained(filename)
+
+	filename = "champ_CORE_00"
+	trainer.train(filename)
+	trainer.saveTrained(filename)
+	
+	filename = "data10000"
+	trainer.train(filename)
+	trainer.saveTrained(filename)
+
+	filename = "data20000"
+	trainer.train(filename)
+	trainer.saveTrained(filename)
+
+	filename = "data30000"
+	trainer.train(filename)
+	trainer.saveTrained(filename)
+
 	# trainer.loadTrained(filename)
 	# network = trainer.buildNetwork()
 	# supervised = arffToData(filename)
