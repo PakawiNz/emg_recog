@@ -1,7 +1,8 @@
 import serial,sys
-import os,glob
+import os,glob,numpy as np
 
 BAUDRATE = 57600
+CENTER_VAL = 512
 
 PACKETLEN = 17
 IDXCH1H,IDXCH1L = 4,5
@@ -11,9 +12,43 @@ IDXCH4H,IDXCH4L = 10,11
 IDXCH5H,IDXCH5L = 12,13
 IDXCH6H,IDXCH6L = 14,15
 
+class NoiseFilter(object) :
+	def __init__(self,attrlist,size=100):
+		self.size = size
+		self.registered = zip(attrlist,map(lambda x : [], attrlist))
+		self.process = self.stabilize
+
+	def stabilize(self,package):
+		for target,buffer in self.registered :
+			data = package.__getattribute__(target)
+			buffer.append(data)
+
+			if len(buffer) > self.size :
+				buffer.pop(0)
+
+			avr = np.average(buffer)
+			package.__setattr__(target,data-(avr-CENTER_VAL))
+
+class Stabilizer(object) :
+	def __init__(self,attrlist,size=6):
+		self.size = size
+		self.registered = zip(attrlist,map(lambda x : [], attrlist))
+		self.process = self.stabilize
+
+	def stabilize(self,package):
+		for target,buffer in self.registered :
+			data = package.__getattribute__(target)
+			buffer.append(data)
+
+			if len(buffer) > self.size :
+				buffer.pop(0)
+
+			avr = np.average(buffer)
+			package.__setattr__(target,data-(avr-CENTER_VAL))
+
 class SerialManager(object) :
 
-	def __init__(self):
+	def __init__(self,stabilize=True):
 		ports = SerialManager.serial_ports()
 		ser = serial.Serial(
 			port=ports[-1],
@@ -24,6 +59,10 @@ class SerialManager(object) :
 		ser.open()
 
 		self.ser = ser
+
+		self.preprocessor = []
+		if stabilize :
+			self.preprocessor.append(Stabilizer(['ch1']))
 
 	@staticmethod
 	def serial_ports():
@@ -49,6 +88,8 @@ class SerialManager(object) :
 	def recieve(self):
 		try :
 			package = Package(self.ser.read(PACKETLEN))
+			for proc in self.preprocessor :
+				proc.process(package)
 			return package
 		except :
 			self.ser.read(1)
@@ -80,5 +121,3 @@ class Package(object) :
 		self.ch4 = (ord(raw_package[IDXCH4H]) << 8) | ord(raw_package[IDXCH4L])
 		self.ch5 = (ord(raw_package[IDXCH5H]) << 8) | ord(raw_package[IDXCH5L])
 		self.ch6 = (ord(raw_package[IDXCH6H]) << 8) | ord(raw_package[IDXCH6L])
-
-

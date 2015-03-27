@@ -3,6 +3,8 @@ from emg_serial import SerialManager
 from emg_weka import WekaTrainer
 from emg_utils import current_milli_time
 from main_ui import MainWindow,action_name
+from emg_controller import KeyController
+from config import TRAINER_CONFIG
 
 import sys
 import time
@@ -18,18 +20,13 @@ class WorkingThread(QtCore.QObject):
 
 	def __init__(self):
 		super(WorkingThread, self).__init__()
+		self._config = TRAINER_CONFIG.copy()
 		self.paused = False
 		self.message = False
-		self._config = {
-			'OUTPUT_TYPE' : 0,
-			'CALC_SIZE' : 128,
-			'SLIDING_SIZE' : 4,
-			'FREQ_DOMAIN' : 8,
-			'TREND_CHUNK' : 0,
-		}
 		self.trainfile = None
+		self.control = False
 		self.confusion = [[0]*6 for i in range(6)]
-
+		self.controller = KeyController()
 
 	def selectFile(self,filename):
 		self.trainfile = filename
@@ -41,7 +38,7 @@ class WorkingThread(QtCore.QObject):
 		self.activity = None
 		self.terminate = False
 
-		ser = SerialManager()
+		ser = SerialManager(stabilize=True)
 		extr = FeatureExtractor(**self._config)
 
 		if self.trainfile == None:
@@ -52,6 +49,8 @@ class WorkingThread(QtCore.QObject):
 		self.network = trainer.buildNetwork()
 		print self.trainfile
 
+		counter = 0
+		lastaction = 0
 		infinite = True
 		while infinite :
 			## -------- TERMINATE ---------------------------------------------------------------------
@@ -71,8 +70,23 @@ class WorkingThread(QtCore.QObject):
 			if result : 
 				self.updateTime.emit(current_milli_time() - calctime)
 				self.updateFFT.emit(result)
+				continue
 				action = self.network.activate(result) + 1
+
+				if counter > 0:
+					counter -= 1
+					action = 5
+				else :
+					if lastaction != action and lastaction != 5 and action != 5:
+						counter += 10
+						action = 5
+					lastaction = action
+
 				self.updateAct.emit(action)
+
+				if self.control :
+					self.controller.control(action)
+
 				if self.activity :
 					self.confusion[self.activity[1]][action] += 1
 
@@ -102,3 +116,4 @@ if __name__ == '__main__':
 	app.exec_()
 	work.terminate = True
 	sys.exit()
+
