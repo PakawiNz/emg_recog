@@ -50,14 +50,15 @@ def getPlotdata(): # return list of (xset,yset,color)
 	# desc = [x.getParam() for x in filtered]
 	# plotData.append((hidd1,accu,blue,desc))
 
-	filtered = filter(lambda x : x.hidd1 == 0,testResult)
+	filtered = testResult
+	# filtered = filter(lambda x : x.hidd1 == 0,testResult)
 	# filtered = filter(lambda x : x.learn == 0.05,filtered)
 	# filtered = filter(lambda x : x.momtm == 0.05,filtered)
-	hidd0 = [x.hidd0 for x in filtered]
-	# hidd1 = [x.hidd1 for x in filtered]
-	accu = [x.accu for x in filtered]
+	# hidd0 = [x.hidd0 for x in filtered]
+	xset = [x.hidd1 for x in filtered]
+	yset = [x.accu for x in filtered]
 	desc = [x.getParam() for x in filtered]
-	plotData.append((hidd0,accu,cyan,desc))
+	plotData.append((xset,yset,cyan,desc))
 	return plotData
 
 

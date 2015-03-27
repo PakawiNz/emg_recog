@@ -4,6 +4,9 @@ import pyqtgraph as pg
 import numpy as np
 import datetime
 
+import importer
+import emg_utils
+
 ACCU_TRS = 80
 TIME_TRS = 20
 
@@ -47,7 +50,7 @@ class TestResult(object):
 		return [self.idx,self.epoch,self.learn,self.momtm,self.hidd0,self.hidd1,self.time,self.accu]
 
 def readCSV(cutoff=True):
-	afile = open('3stat/resultsum.csv','r')
+	afile = open('x_data/resultsum.csv','r')
 	lines = afile.readlines()
 
 	return map(lambda x : TestResult(*x.split(','),cutoff=cutoff) , lines)
@@ -59,8 +62,8 @@ def preparePoints(result,colorMode=0):
 
 	result = filter(lambda x : x.hidd1 == 0, result)
 	xset = map(lambda x : x.learn,result)
-	# yset = map(lambda x : x.learn,result)
-	yset = map(lambda x : x.time,result)
+	yset = map(lambda x : x.momtm,result)
+	# yset = map(lambda x : x.time,result)
 	zset = map(lambda x : x.accu,result)
 
 	minx,maxx = min(xset),max(xset)

@@ -8,6 +8,7 @@ import multiprocessing as mp
 import itertools
 import threading
 import sys,signal,os
+import datetime
 
 POS_INF = 1000000
 
@@ -90,18 +91,19 @@ class AutoWekaWorker(object):
 
 def runEpoch(epoch):
 	config = [
-		[0.05,0.8,16,0],
-		[3.2,3.2,20,0],
-		[0.2,3.2,24,0],
-		[1.6,3.2,20,0],
-		[3.2,0.2,20,0],
-		[3.2,1.6,20,0],
-		[3.2,1.6,14,0],
-		[0.1,3.2,16,0],
-		[3.2,0.2,14,0],
-		[0.1,0.8,20,0],]
+		[0.05,0.05,12,0],
+		[0.8,0.05,16,0],
+		[0.05,0.4,16,0],
+		[1.6,3.2,14,0],
+		[0.8,0.1,20,0],
+		[0.2,3.2,14,0],
+		[0.3,0.1,16,0],
+		[0.3,0.2,20,0],
+		[0.3,0.2,24,0],
+		[0.2,0.2,20,0],
+	]
 
-	header = ['EPOCH','MOMENTUM','LEARNING_RATE','HIDDEN1','HIDDEN2']
+	header = ['EPOCH','LEARNING_RATE','MOMENTUM','HIDDEN1','HIDDEN2']
 	cartesian = map(lambda x : [x[0]]+x[1],itertools.product(epoch,config))
 	cartesian = map(lambda x: dict(zip(header,x)), cartesian)
 	# shuffle(cartesian)
@@ -110,12 +112,12 @@ def runEpoch(epoch):
 
 	return cartesian
 
-def createCartesian(epoch,momentum,learning_rate,hidden0,hidden1):
+def createCartesian(epoch,learning_rate,momentum,hidden0,hidden1):
 
-	header = ['EPOCH','MOMENTUM','LEARNING_RATE','HIDDEN1','HIDDEN2']
+	header = ['EPOCH','LEARNING_RATE','MOMENTUM','HIDDEN1','HIDDEN2']
 
 	# cartesian = list(dict(zip(dicts, x)) for x in itertools.product(*list(dicts.itervalues())))
-	cartesian = list(itertools.product(epoch,momentum,learning_rate,hidden0,hidden1))
+	cartesian = list(itertools.product(epoch,learning_rate,momentum,hidden0,hidden1))
 	cartesian = map(lambda x: dict(zip(header,x)), cartesian)
 	# shuffle(cartesian)
 	
@@ -130,24 +132,32 @@ def multiAutoWEKA(exp,filename,threadAmount,start=0,end=100000):
 	# learning_rate 	= [0.05,0.1,0.2,0.4,0.8,1.6,3.2]
 	# hidden0 		= [4,5,6,7,8,9,10,12,14,16,20,24,30,36]
 	# hidden1 		= [0,5,7,9,12,15,18]
-	epoch 			= [50,100,200,300,500,700,900,1200,1500,1800,2400,3000]
+	# epoch 			= [50,100,200,300,500,700,900,1200,1500,1800,2400,3000]
+	# epoch 			= [400,600,800,1000,1100,1300,1400,1600,1700,1900,2000,2100,2200,2300,2500,2600,2700,2800,2900]
+	# epoch 			= map(lambda x: x*100 , range(1,61))
+	epoch 			= [4000,5000,6000]
 	learning_rate 	= [0.05]
 	momentum 		= [0.4]
 	hidden0 		= [16]
 	hidden1 		= [0]
+	print sum(epoch)
 
 	print "WARNING : In order to exit, you should (type 'e') instead of (CTRL+C), unless some result may lost"
 	if isLinux :
 		print "WARNING : (Linux) You should kill the java process by yourself!! after exit with (type 'e')"
 
-	# cartesian = createCartesian(epoch, momentum, learning_rate, hidden0, hidden1)
+	# cartesian = createCartesian(epoch, learning_rate, momentum, hidden0, hidden1)
 	cartesian = runEpoch(epoch)
 	if end == POS_INF :
 		end = len(cartesian)-1
 
+	calctime = reduce(lambda a,b=0 : a+b ,map(lambda x:x['EPOCH'],cartesian[start:end+1]))/thread
+	calctime = datetime.timedelta(seconds=calctime)
+
 	print 'thread amount = %d'%(thread)
 	print 'start position = %d'%(start)
 	print 'end position = %d'%(end)
+	print 'estimate calctime = %s (epoch/sec = 1)'%(calctime)
 
 	worker = AutoWekaWorker(exp, filename, cartesian, start, end, threadAmount)
 

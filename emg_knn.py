@@ -73,7 +73,12 @@ def crossValidation(filename,k_fold=10):
 		print ",".join(map(str,[filename,length,len(shuffled),fold,accu,time] + stat))
 
 if __name__ == '__main__':
-	crossValidation('data20000',20)
+	crossValidation('150320',10)
+	crossValidation('champ_CORE_00',10)
+	crossValidation('data10000',10)
+	crossValidation('data20000',10)
+	crossValidation('data30000',10)
 	# knn = KNN('data20000')
 	# test = knn.trainingSet[0]
 	# knn.activate(test[:-1])
+
